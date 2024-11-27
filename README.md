@@ -1,7 +1,7 @@
 # LyricsLabMuse
 ## Get started
 - Clone the repository
-- OPENAI_API_KEY
+- OPENAI_API_KEY  
     Right now, the project is configured to work with OpenAI models. To configure OpenAI API Key:
     1. Create .env file
     2. Add key like this
