@@ -4,14 +4,15 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QCheckBox, QComboBox, QVBoxLayout, QPushButton, 
                              QHBoxLayout, QFrame, QMessageBox, QTextEdit)
 from PyQt5.QtGui import QFont, QPalette, QColor
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 # Importation de notre module d'intégration ChatGPT
 from chatgpt_integration import ChatGPTIntegration
 
-class ChatGPTThread(QThread):
-    """Thread pour gérer l'appel à ChatGPT sans bloquer l'interface"""
-    result_ready = pyqtSignal(str)
+class StreamThread(QThread):
+    """Thread pour gérer le streaming de ChatGPT"""
+    chunk_ready = pyqtSignal(str)
+    stream_complete = pyqtSignal()
     
     def __init__(self, nom, prenom):
         super().__init__()
@@ -21,16 +22,64 @@ class ChatGPTThread(QThread):
     def run(self):
         try:
             chatgpt = ChatGPTIntegration()
-            description = chatgpt.generate_description(self.nom, self.prenom)
-            self.result_ready.emit(description)
+            stream = chatgpt.generate_description(self.nom, self.prenom)
+            
+            # Parcourir le flux de réponse
+            for chunk in stream:
+                if chunk:
+                    self.chunk_ready.emit(chunk)
+            
+            self.stream_complete.emit()
         except Exception as e:
-            self.result_ready.emit(f"Erreur : {str(e)}")
+            self.chunk_ready.emit(f"Erreur : {str(e)}")
+            self.stream_complete.emit()
 
 class ModernInterface(QWidget):
     def __init__(self):
         super().__init__()
-        self.dark_mode = False  # Par défaut, mode clair
+        self.dark_mode = False
+        self.streaming_thread = None
         self.initUI()
+    
+    # [Le reste de votre méthode initUI() reste identique]
+    
+    def generer_description(self):
+        # Récupérer le nom et prénom
+        nom = self.text_fields[0].text()
+        prenom = self.text_fields[1].text()
+        
+        # Vérifier que les champs ne sont pas vides
+        if not nom or not prenom:
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir le nom et le prénom")
+            return
+        
+        # Réinitialiser le champ de description
+        self.description_field.clear()
+        
+        # Arrêter tout thread de streaming précédent
+        if self.streaming_thread and self.streaming_thread.isRunning():
+            self.streaming_thread.terminate()
+        
+        # Créer et lancer un nouveau thread de streaming
+        self.streaming_thread = StreamThread(nom, prenom)
+        self.streaming_thread.chunk_ready.connect(self.update_description_streaming)
+        self.streaming_thread.stream_complete.connect(self.on_stream_complete)
+        self.streaming_thread.start()
+    
+    def update_description_streaming(self, chunk):
+        # Ajouter le nouveau morceau au texte existant
+        current_text = self.description_field.toPlainText()
+        self.description_field.setText(current_text + chunk)
+        
+        # Faire défiler automatiquement vers le bas
+        self.description_field.verticalScrollBar().setValue(
+            self.description_field.verticalScrollBar().maximum()
+        )
+    
+    def on_stream_complete(self):
+        # Vous pouvez ajouter un traitement supplémentaire une fois le streaming terminé
+        pass
+
         
     def initUI(self):
         # Configuration de la fenêtre
@@ -150,25 +199,6 @@ class ModernInterface(QWidget):
             self.chatgpt_integration = ChatGPTIntegration()
         except ValueError as e:
             QMessageBox.warning(self, "Erreur de Configuration", str(e))
-    
-    def generer_description(self):
-        # Récupérer le nom et prénom
-        nom = self.text_fields[0].text()
-        prenom = self.text_fields[1].text()
-        
-        # Vérifier que les champs ne sont pas vides
-        if not nom or not prenom:
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir le nom et le prénom")
-            return
-        
-        # Lancer le thread pour l'appel à ChatGPT
-        self.chatgpt_thread = ChatGPTThread(nom, prenom)
-        self.chatgpt_thread.result_ready.connect(self.update_description)
-        self.chatgpt_thread.start()
-    
-    def update_description(self, description):
-        # Mettre à jour le champ de description
-        self.description_field.setText(description)
 
     # [Autres méthodes de la classe originale : toggle_theme, apply_dark_theme, apply_light_theme, valider restent identiques]
     def toggle_theme(self):
