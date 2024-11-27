@@ -199,25 +199,6 @@ class ModernInterface(QWidget):
             self.chatgpt_integration = ChatGPTIntegration()
         except ValueError as e:
             QMessageBox.warning(self, "Erreur de Configuration", str(e))
-    
-    # def generer_description(self):
-    #     # Récupérer le nom et prénom
-    #     nom = self.text_fields[0].text()
-    #     prenom = self.text_fields[1].text()
-        
-    #     # Vérifier que les champs ne sont pas vides
-    #     if not nom or not prenom:
-    #         QMessageBox.warning(self, "Erreur", "Veuillez remplir le nom et le prénom")
-    #         return
-        
-    #     # Lancer le thread pour l'appel à ChatGPT
-    #     self.chatgpt_thread = StreamThread(nom, prenom)
-    #     self.chatgpt_thread.chunk_ready.connect(self.update_description)
-    #     self.chatgpt_thread.start()
-    
-    # def update_description(self, description):
-    #     # Mettre à jour le champ de description
-    #     self.description_field.setText(description)
 
     # [Autres méthodes de la classe originale : toggle_theme, apply_dark_theme, apply_light_theme, valider restent identiques]
     def toggle_theme(self):
