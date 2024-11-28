@@ -45,7 +45,7 @@ class ModernInterface(QWidget):
         self.setWindowTitle('LyricsLabMuse')
         self.setGeometry(100, 100, 800, 700)
 
-        # Start the application in full-screen mode
+        # Start the application max size
         self.showMaximized()
 
         main_layout = QVBoxLayout()
