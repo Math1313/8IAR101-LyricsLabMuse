@@ -1,0 +1,6 @@
+python-dotenv
+langchain
+PyQt5
+langchain_community
+langchain_openai
+openai
