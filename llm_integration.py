@@ -5,29 +5,15 @@ from langchain.schema import StrOutputParser
 
 class LLMIntegration:
     def __init__(self):
-        # Assurez-vous de définir votre clé API OpenAI comme variable d'environnement
-        # self.api_key = os.getenv('OPENAI_API_KEY')
-        # if not self.api_key:
-        #     raise ValueError("Veuillez définir la variable d'environnement OPENAI_API_KEY")
-        
         self.llm = ChatOpenAI(
-            temperature=0.001, 
-            base_url="http://localhost:1234/v1/", #TODO: Modifier l'adresse IP si on change de place
+            temperature=0.001,
+            base_url="http://localhost:1234/v1/",  # TODO: Modifier l'adresse IP si on change de place
             api_key="not-needed",
             streaming=True  # Activer le streaming pour voir les mots un à un
         )
-    
-    def generate_description(self, nom, prenom):
-        """Génère une description basée sur le nom et prénom"""
-        prompt = ChatPromptTemplate.from_template(
-            "Crée une courte description imaginative et amusante pour {prenom} {nom}"
-        )
-        
-        chain = prompt | self.llm | StrOutputParser()
-        # Utiliser stream au lieu de invoke pour activer le streaming
-        return chain.stream({"nom": nom, "prenom": prenom})
-    
+
     def generate_lyrics(self, musicalStyle, songTheme, mood, language):
+        """Génère des paroles de chanson basées sur le style musical, le thème, l'humeur et la langue"""
         prompt = ChatPromptTemplate.from_template(
             """
                 You are a talented songwriter capable of crafting lyrics and melodies across genres.
@@ -43,6 +29,7 @@ class LLMIntegration:
         return chain.stream({"musicalStyle": musicalStyle, "songTheme": songTheme, "mood": mood, "language": language})
 
     def generate_song_structure(self, musicalStyle, songTheme, mood, language):
+        """Génère une structure de chanson basée sur le style musical, le thème, l'humeur et la langue"""
         prompt = ChatPromptTemplate.from_template(
             """
                 You are a skilled music composer capable of creating song structures across various genres.
@@ -59,6 +46,7 @@ class LLMIntegration:
         return chain.stream({"musicalStyle": musicalStyle, "songTheme": songTheme, "mood": mood, "language": language})
 
     def generate_chord_progression(self, musicalStyle, songTheme, mood, language):
+        """Génère une progression d'accords basée sur le style musical, le thème, l'humeur et la langue"""
         prompt = ChatPromptTemplate.from_template(
             """
                 You are a skilled musician capable of creating chord progressions across various genres.

@@ -42,21 +42,29 @@ class ModernInterface(QWidget):
         self.initUI()
 
     def initUI(self):
-        # Configuration de la fenêtre
-        self.setWindowTitle('Application Moderne')
-        self.setGeometry(100, 100, 500, 700)
+        self.setWindowTitle('LyricsLabMuse')
+        self.setGeometry(100, 100, 800, 700)
 
-        # Layout principal
         main_layout = QVBoxLayout()
-
-        # Frame pour un effet de conteneur
         frame = QFrame()
         frame.setObjectName('mainFrame')
-
-        # CORRECTION : Création du frame_layout
         frame_layout = QVBoxLayout()
 
-        # Titre
+        self.create_title(frame_layout)
+        self.create_input_sections(frame_layout)
+        self.create_lyrics_section(frame_layout)
+        self.create_song_structure_section(frame_layout)
+        self.create_chord_progression_section(frame_layout)
+        self.create_buttons(frame_layout)
+
+        frame.setLayout(frame_layout)
+        main_layout.addWidget(frame)
+        self.setLayout(main_layout)
+
+        self.apply_light_theme()
+        self.initialize_llm()
+
+    def create_title(self, layout):
         titre = QLabel('Formulaire de Saisie')
         titre.setAlignment(Qt.AlignCenter)
         titre.setStyleSheet("""
@@ -64,127 +72,142 @@ class ModernInterface(QWidget):
             font-weight: bold;
             margin-bottom: 20px;
         """)
-        frame_layout.addWidget(titre)
+        layout.addWidget(titre)
 
-        # Champs de texte avec labels élégants
-        def create_input_section(label_text):
-            section_layout = QVBoxLayout()
-            label = QLabel(label_text)
-            label.setStyleSheet("""
-                font-weight: bold;
-                margin-bottom: 5px;
-            """)
-            input_field = QLineEdit()
-            input_field.setPlaceholderText(f'Entrez votre {label_text.lower()}')
-
-            section_layout.addWidget(label)
-            section_layout.addWidget(input_field)
-            return section_layout, input_field
-
-        # Créer les champs de texte
-        text_layouts = []
+    def create_input_sections(self, layout):
         self.text_fields = []
-        for label in ['Musical Style', 'Song Theme', 'Mood', 'Language']:
-            layout, field = create_input_section(label)
-            text_layouts.append(layout)
+        labels = ['Musical Style', 'Song Theme', 'Mood', 'Language']
+        for label in labels:
+            section_layout, field = self.create_input_section(label)
+            layout.addLayout(section_layout)
             self.text_fields.append(field)
 
-        # Ajouter les champs de texte au layout
-        for layout in text_layouts:
-            frame_layout.addLayout(layout)
+    def create_input_section(self, label_text):
+        section_layout = QVBoxLayout()
+        label = QLabel(label_text)
+        label.setStyleSheet("""
+            font-weight: bold;
+            margin-bottom: 5px;
+        """)
+        input_field = QLineEdit()
+        input_field.setPlaceholderText(f'Entrez votre {label_text.lower()}')
 
-        # Description ChatGPT
-        description_label = QLabel('Description générée')
-        description_label.setStyleSheet("""
+        section_layout.addWidget(label)
+        section_layout.addWidget(input_field)
+        return section_layout, input_field
+
+    def create_lyrics_section(self, layout):
+        lyrics_label = QLabel('Paroles de Chanson Générées')
+        lyrics_label.setStyleSheet("""
             font-weight: bold;
             margin-bottom: 5px;
         """)
 
-        self.description_field = QTextEdit()
-        self.description_field.setReadOnly(True)
-        self.description_field.setPlaceholderText('La description sera générée ici')
+        self.lyrics_field = QTextEdit()
+        self.lyrics_field.setReadOnly(True)
+        self.lyrics_field.setPlaceholderText('Les paroles de la chanson seront générées ici')
 
-        # Bouton pour générer la structure de la chanson
+        layout.addWidget(lyrics_label)
+        layout.addWidget(self.lyrics_field)
+
+    def create_song_structure_section(self, layout):
+        structure_label = QLabel('Structure de Chanson Générée')
+        structure_label.setStyleSheet("""
+            font-weight: bold;
+            margin-bottom: 5px;
+        """)
+
+        self.structure_field = QTextEdit()
+        self.structure_field.setReadOnly(True)
+        self.structure_field.setPlaceholderText('La structure de la chanson sera générée ici')
+
+        layout.addWidget(structure_label)
+        layout.addWidget(self.structure_field)
+
+    def create_chord_progression_section(self, layout):
+        chords_label = QLabel('Progression d\'Accords Générée')
+        chords_label.setStyleSheet("""
+            font-weight: bold;
+            margin-bottom: 5px;
+        """)
+
+        self.chords_field = QTextEdit()
+        self.chords_field.setReadOnly(True)
+        self.chords_field.setPlaceholderText('La progression d\'accords sera générée ici')
+
+        layout.addWidget(chords_label)
+        layout.addWidget(self.chords_field)
+
+    def create_buttons(self, layout):
+        self.bouton_generer_lyrics = QPushButton('Générer Paroles de Chanson')
+        self.bouton_generer_lyrics.clicked.connect(self.generer_lyrics)
+        layout.addWidget(self.bouton_generer_lyrics)
+
         self.bouton_generer_structure = QPushButton('Générer Structure de Chanson')
         self.bouton_generer_structure.clicked.connect(self.generer_song_structure)
-        frame_layout.addWidget(self.bouton_generer_structure)
+        layout.addWidget(self.bouton_generer_structure)
 
-        # Bouton pour générer la progression d'accords
         self.bouton_generer_chords = QPushButton('Générer Progression d\'Accords')
         self.bouton_generer_chords.clicked.connect(self.generer_chord_progression)
-        frame_layout.addWidget(self.bouton_generer_chords)
+        layout.addWidget(self.bouton_generer_chords)
 
-        # Checkbox
         self.checkbox = QCheckBox('J\'accepte les conditions')
         self.checkbox.setStyleSheet("""
             margin-top: 10px;
             margin-bottom: 10px;
         """)
-        frame_layout.addWidget(self.checkbox)
+        layout.addWidget(self.checkbox)
 
-        # Liste déroulante
         liste_label = QLabel('Sélectionnez une option')
         liste_label.setStyleSheet('font-weight: bold;')
         self.liste_deroulante = QComboBox()
         self.liste_deroulante.addItems(['Option 1', 'Option 2', 'Option 3'])
 
-        frame_layout.addWidget(liste_label)
-        frame_layout.addWidget(self.liste_deroulante)
+        layout.addWidget(liste_label)
+        layout.addWidget(self.liste_deroulante)
 
-        # Boutons
         bouton_layout = QHBoxLayout()
-
-        # Bouton de validation
         self.bouton_valider = QPushButton('Valider')
         self.bouton_valider.clicked.connect(self.valider)
 
-        # Bouton de mode sombre
         self.bouton_mode = QPushButton('🌙 Mode Sombre')
         self.bouton_mode.clicked.connect(self.toggle_theme)
 
         bouton_layout.addWidget(self.bouton_valider)
         bouton_layout.addWidget(self.bouton_mode)
 
-        frame_layout.addLayout(bouton_layout)
+        layout.addLayout(bouton_layout)
 
-        # Appliquer le layout au frame
-        frame.setLayout(frame_layout)
-
-        # Ajouter le frame au layout principal
-        main_layout.addWidget(frame)
-        self.setLayout(main_layout)
-
-        # Appliquer le style initial (mode clair)
-        self.apply_light_theme()
-
-        # Initialiser l'intégration ChatGPT
+    def initialize_llm(self):
         try:
             self.chatgpt_integration = LLMIntegration()
         except ValueError as e:
             QMessageBox.warning(self, "Erreur de Configuration", str(e))
 
-    # def generer_description(self):
-    #     # Récupérer le nom et prénom
-    #     nom = self.text_fields[0].text()
-    #     prenom = self.text_fields[1].text()
+    def generer_lyrics(self):
+        # Récupérer les informations nécessaires
+        musicalStyle = self.text_fields[0].text()
+        songTheme = self.text_fields[1].text()
+        mood = self.text_fields[2].text()
+        language = self.text_fields[3].text()
 
-    #     # Vérifier que les champs ne sont pas vides
-    #     if not nom or not prenom:
-    #         QMessageBox.warning(self, "Erreur", "Veuillez remplir le nom et le prénom")
-    #         return
+        # Vérifier que les champs ne sont pas vides
+        if not musicalStyle or not songTheme or not mood or not language:
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs nécessaires")
+            return
 
-    #     # Réinitialiser le champ de description
-    #     self.description_field.clear()
+        # Réinitialiser le champ de lyrics
+        self.lyrics_field.clear()
 
-    #     # Arrêter tout thread de streaming précédent
-    #     if self.streaming_thread and self.streaming_thread.isRunning():
-    #         self.streaming_thread.terminate()
+        # Arrêter tout thread de streaming précédent
+        if self.streaming_thread and self.streaming_thread.isRunning():
+            self.streaming_thread.terminate()
 
-    #     # Créer et lancer un nouveau thread de streaming
-    #     self.streaming_thread = StreamThread('generate_description', nom, prenom)
-    #     self.streaming_thread.chunk_ready.connect(self.update_description_streaming)
-    #     self.streaming_thread.stream_complete.connect(self.on_stream_complete)
-    #     self.streaming_thread.start()
+        # Créer et lancer un nouveau thread de streaming
+        self.streaming_thread = StreamThread('generate_lyrics', musicalStyle, songTheme, mood, language)
+        self.streaming_thread.chunk_ready.connect(self.update_lyrics_streaming)
+        self.streaming_thread.stream_complete.connect(self.on_stream_complete)
+        self.streaming_thread.start()
 
     def generer_song_structure(self):
         # Récupérer les informations nécessaires
@@ -198,8 +221,8 @@ class ModernInterface(QWidget):
             QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs nécessaires")
             return
 
-        # Réinitialiser le champ de description
-        self.description_field.clear()
+        # Réinitialiser le champ de structure
+        self.structure_field.clear()
 
         # Arrêter tout thread de streaming précédent
         if self.streaming_thread and self.streaming_thread.isRunning():
@@ -207,7 +230,7 @@ class ModernInterface(QWidget):
 
         # Créer et lancer un nouveau thread de streaming
         self.streaming_thread = StreamThread('generate_song_structure', musicalStyle, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(self.update_description_streaming)
+        self.streaming_thread.chunk_ready.connect(self.update_structure_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)
         self.streaming_thread.start()
 
@@ -223,8 +246,8 @@ class ModernInterface(QWidget):
             QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs nécessaires")
             return
 
-        # Réinitialiser le champ de description
-        self.description_field.clear()
+        # Réinitialiser le champ de chords
+        self.chords_field.clear()
 
         # Arrêter tout thread de streaming précédent
         if self.streaming_thread and self.streaming_thread.isRunning():
@@ -232,18 +255,38 @@ class ModernInterface(QWidget):
 
         # Créer et lancer un nouveau thread de streaming
         self.streaming_thread = StreamThread('generate_chord_progression', musicalStyle, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(self.update_description_streaming)
+        self.streaming_thread.chunk_ready.connect(self.update_chords_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)
         self.streaming_thread.start()
 
-    def update_description_streaming(self, chunk):
+    def update_lyrics_streaming(self, chunk):
         # Ajouter le nouveau morceau au texte existant
-        current_text = self.description_field.toPlainText()
-        self.description_field.setText(current_text + chunk)
+        current_text = self.lyrics_field.toPlainText()
+        self.lyrics_field.setText(current_text + chunk)
 
         # Faire défiler automatiquement vers le bas
-        self.description_field.verticalScrollBar().setValue(
-            self.description_field.verticalScrollBar().maximum()
+        self.lyrics_field.verticalScrollBar().setValue(
+            self.lyrics_field.verticalScrollBar().maximum()
+        )
+
+    def update_structure_streaming(self, chunk):
+        # Ajouter le nouveau morceau au texte existant
+        current_text = self.structure_field.toPlainText()
+        self.structure_field.setText(current_text + chunk)
+
+        # Faire défiler automatiquement vers le bas
+        self.structure_field.verticalScrollBar().setValue(
+            self.structure_field.verticalScrollBar().maximum()
+        )
+
+    def update_chords_streaming(self, chunk):
+        # Ajouter le nouveau morceau au texte existant
+        current_text = self.chords_field.toPlainText()
+        self.chords_field.setText(current_text + chunk)
+
+        # Faire défiler automatiquement vers le bas
+        self.chords_field.verticalScrollBar().setValue(
+            self.chords_field.verticalScrollBar().maximum()
         )
 
     def on_stream_complete(self):
@@ -323,12 +366,11 @@ class ModernInterface(QWidget):
         # Validation des champs
         erreurs = []
 
-        # for i, champ in enumerate(['Nom', 'Prénom', 'Email']):
-        #     if not self.text_fields[i].text():
-        #         erreurs.append(f"Le champ {champ} est obligatoire.")
-
         if not self.checkbox.isChecked():
             erreurs.append("Vous devez accepter les conditions.")
+
+        if self.liste_deroulante.currentIndex() == -1:
+            erreurs.append("Vous devez sélectionner une option.")
 
         if erreurs:
             # Afficher les erreurs
@@ -341,9 +383,6 @@ class ModernInterface(QWidget):
         else:
             # Récupérer les valeurs
             resultats = {
-                # 'Nom': self.text_fields[0].text(),
-                # 'Prénom': self.text_fields[1].text(),
-                # 'Email': self.text_fields[2].text(),
                 'Conditions': self.checkbox.isChecked(),
                 'Option': self.liste_deroulante.currentText()
             }
