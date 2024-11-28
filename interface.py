@@ -2,7 +2,7 @@ import sys
 import os
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QCheckBox, QComboBox, QVBoxLayout, QPushButton,
-                             QHBoxLayout, QFrame, QMessageBox, QTextEdit)
+                             QHBoxLayout, QFrame, QMessageBox, QTextEdit, QScrollArea)
 from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 
@@ -45,23 +45,32 @@ class ModernInterface(QWidget):
         self.setWindowTitle('LyricsLabMuse')
         self.setGeometry(100, 100, 800, 700)
 
+        # Start the application in full-screen mode
+        self.showMaximized()
+
         main_layout = QVBoxLayout()
-        frame = QFrame()
-        frame.setObjectName('mainFrame')
-        frame_layout = QVBoxLayout()
 
-        self.create_title(frame_layout)
-        self.create_input_sections(frame_layout)
-        self.create_lyrics_section(frame_layout)
-        self.create_song_structure_section(frame_layout)
-        self.create_chord_progression_section(frame_layout)
-        self.create_buttons(frame_layout)
+        # Create a scroll area for the entire content
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
-        frame.setLayout(frame_layout)
-        main_layout.addWidget(frame)
+        # Create a frame to hold the content
+        content_frame = QFrame()
+        content_layout = QVBoxLayout(content_frame)
+
+        self.create_title(content_layout)
+        self.create_input_sections(content_layout)
+        self.create_lyrics_section(content_layout)
+        self.create_song_structure_section(content_layout)
+        self.create_chord_progression_section(content_layout)
+        self.create_buttons(content_layout)
+
+        scroll_area.setWidget(content_frame)
+        main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
 
-        self.apply_light_theme()
+        self.apply_dark_theme()
         self.initialize_llm()
 
     def create_title(self, layout):
@@ -107,8 +116,11 @@ class ModernInterface(QWidget):
         self.lyrics_field.setReadOnly(True)
         self.lyrics_field.setPlaceholderText('Les paroles de la chanson seront générées ici')
 
-        layout.addWidget(lyrics_label)
-        layout.addWidget(self.lyrics_field)
+        lyrics_layout = QVBoxLayout()
+        lyrics_layout.addWidget(lyrics_label)
+        lyrics_layout.addWidget(self.lyrics_field)
+
+        layout.addLayout(lyrics_layout)
 
     def create_song_structure_section(self, layout):
         structure_label = QLabel('Structure de Chanson Générée')
@@ -121,8 +133,11 @@ class ModernInterface(QWidget):
         self.structure_field.setReadOnly(True)
         self.structure_field.setPlaceholderText('La structure de la chanson sera générée ici')
 
-        layout.addWidget(structure_label)
-        layout.addWidget(self.structure_field)
+        structure_layout = QVBoxLayout()
+        structure_layout.addWidget(structure_label)
+        structure_layout.addWidget(self.structure_field)
+
+        layout.addLayout(structure_layout)
 
     def create_chord_progression_section(self, layout):
         chords_label = QLabel('Progression d\'Accords Générée')
@@ -135,8 +150,11 @@ class ModernInterface(QWidget):
         self.chords_field.setReadOnly(True)
         self.chords_field.setPlaceholderText('La progression d\'accords sera générée ici')
 
-        layout.addWidget(chords_label)
-        layout.addWidget(self.chords_field)
+        chords_layout = QVBoxLayout()
+        chords_layout.addWidget(chords_label)
+        chords_layout.addWidget(self.chords_field)
+
+        layout.addLayout(chords_layout)
 
     def create_buttons(self, layout):
         self.bouton_generer_lyrics = QPushButton('Générer Paroles de Chanson')
