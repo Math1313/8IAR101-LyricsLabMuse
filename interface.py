@@ -74,7 +74,7 @@ class ModernInterface(QWidget):
         self.initialize_llm()
 
     def create_title(self, layout):
-        titre = QLabel('Formulaire de Saisie')
+        titre = QLabel('LyricsLabMuse')
         titre.setAlignment(Qt.AlignCenter)
         titre.setStyleSheet("""
             font-size: 24px;
