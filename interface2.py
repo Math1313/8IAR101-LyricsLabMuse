@@ -223,7 +223,7 @@ class ModernInterface(QWidget):
 
     def initialize_llm(self):
         try:
-            self.chatgpt_integration = LLMIntegration()
+            self.chatgpt_integration = LLMIntegration2()
         except ValueError as e:
             QMessageBox.warning(self, "Erreur de Configuration", str(e))
 
