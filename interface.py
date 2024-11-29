@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 # Importation de notre module d'intégration ChatGPT
 from llm_integration import LLMIntegration
+from llm_integration2 import LLMIntegration2
 
 class StreamThread(QThread):
     """Thread pour gérer le streaming de ChatGPT"""
