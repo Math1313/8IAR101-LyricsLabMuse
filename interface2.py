@@ -62,9 +62,9 @@ class ModernInterface(QWidget):
 
         self.create_title(content_layout)
         self.create_input_sections(content_layout)
-        self.create_lyrics_section(content_layout)
-        self.create_song_structure_section(content_layout)
-        self.create_chord_progression_section(content_layout)
+        # self.create_lyrics_section(content_layout)
+        # self.create_song_structure_section(content_layout)
+        # self.create_chord_progression_section(content_layout)
         self.create_buttons(content_layout)
         # Add a new method to create full composition section
         self.create_full_composition_section(content_layout)
@@ -108,56 +108,56 @@ class ModernInterface(QWidget):
         section_layout.addWidget(input_field)
         return section_layout, input_field
 
-    def create_lyrics_section(self, layout):
-        lyrics_label = QLabel('Paroles de Chanson Générées')
-        lyrics_label.setStyleSheet("""
-            font-weight: bold;
-            margin-bottom: 5px;
-        """)
+    # def create_lyrics_section(self, layout):
+    #     lyrics_label = QLabel('Paroles de Chanson Générées')
+    #     lyrics_label.setStyleSheet("""
+    #         font-weight: bold;
+    #         margin-bottom: 5px;
+    #     """)
+    #
+    #     self.lyrics_field = QTextEdit()
+    #     self.lyrics_field.setReadOnly(True)
+    #     self.lyrics_field.setPlaceholderText('Les paroles de la chanson seront générées ici')
+    #
+    #     lyrics_layout = QVBoxLayout()
+    #     lyrics_layout.addWidget(lyrics_label)
+    #     lyrics_layout.addWidget(self.lyrics_field)
+    #
+    #     layout.addLayout(lyrics_layout)
 
-        self.lyrics_field = QTextEdit()
-        self.lyrics_field.setReadOnly(True)
-        self.lyrics_field.setPlaceholderText('Les paroles de la chanson seront générées ici')
+    # def create_song_structure_section(self, layout):
+    #     structure_label = QLabel('Structure de Chanson Générée')
+    #     structure_label.setStyleSheet("""
+    #         font-weight: bold;
+    #         margin-bottom: 5px;
+    #     """)
+    #
+    #     self.structure_field = QTextEdit()
+    #     self.structure_field.setReadOnly(True)
+    #     self.structure_field.setPlaceholderText('La structure de la chanson sera générée ici')
+    #
+    #     structure_layout = QVBoxLayout()
+    #     structure_layout.addWidget(structure_label)
+    #     structure_layout.addWidget(self.structure_field)
+    #
+    #     layout.addLayout(structure_layout)
 
-        lyrics_layout = QVBoxLayout()
-        lyrics_layout.addWidget(lyrics_label)
-        lyrics_layout.addWidget(self.lyrics_field)
-
-        layout.addLayout(lyrics_layout)
-
-    def create_song_structure_section(self, layout):
-        structure_label = QLabel('Structure de Chanson Générée')
-        structure_label.setStyleSheet("""
-            font-weight: bold;
-            margin-bottom: 5px;
-        """)
-
-        self.structure_field = QTextEdit()
-        self.structure_field.setReadOnly(True)
-        self.structure_field.setPlaceholderText('La structure de la chanson sera générée ici')
-
-        structure_layout = QVBoxLayout()
-        structure_layout.addWidget(structure_label)
-        structure_layout.addWidget(self.structure_field)
-
-        layout.addLayout(structure_layout)
-
-    def create_chord_progression_section(self, layout):
-        chords_label = QLabel('Progression d\'Accords Générée')
-        chords_label.setStyleSheet("""
-            font-weight: bold;
-            margin-bottom: 5px;
-        """)
-
-        self.chords_field = QTextEdit()
-        self.chords_field.setReadOnly(True)
-        self.chords_field.setPlaceholderText('La progression d\'accords sera générée ici')
-
-        chords_layout = QVBoxLayout()
-        chords_layout.addWidget(chords_label)
-        chords_layout.addWidget(self.chords_field)
-
-        layout.addLayout(chords_layout)
+    # def create_chord_progression_section(self, layout):
+    #     chords_label = QLabel('Progression d\'Accords Générée')
+    #     chords_label.setStyleSheet("""
+    #         font-weight: bold;
+    #         margin-bottom: 5px;
+    #     """)
+    #
+    #     self.chords_field = QTextEdit()
+    #     self.chords_field.setReadOnly(True)
+    #     self.chords_field.setPlaceholderText('La progression d\'accords sera générée ici')
+    #
+    #     chords_layout = QVBoxLayout()
+    #     chords_layout.addWidget(chords_label)
+    #     chords_layout.addWidget(self.chords_field)
+    #
+    #     layout.addLayout(chords_layout)
 
     def create_full_composition_section(self, layout):
         full_composition_label = QLabel('Composition Complète Générée')
@@ -176,50 +176,45 @@ class ModernInterface(QWidget):
 
         layout.addLayout(full_composition_layout)
 
-        # Add button for full composition
-        self.bouton_generer_composition = QPushButton('Générer Composition Complète')
-        self.bouton_generer_composition.clicked.connect(self.generer_full_composition)
-        layout.addWidget(self.bouton_generer_composition)
-
     def create_buttons(self, layout):
-        self.bouton_generer_lyrics = QPushButton('Générer Paroles de Chanson')
-        self.bouton_generer_lyrics.clicked.connect(self.generer_lyrics)
-        layout.addWidget(self.bouton_generer_lyrics)
-
-        self.bouton_generer_structure = QPushButton('Générer Structure de Chanson')
-        self.bouton_generer_structure.clicked.connect(self.generer_song_structure)
-        layout.addWidget(self.bouton_generer_structure)
-
-        self.bouton_generer_chords = QPushButton('Générer Progression d\'Accords')
-        self.bouton_generer_chords.clicked.connect(self.generer_chord_progression)
-        layout.addWidget(self.bouton_generer_chords)
-
-        self.checkbox = QCheckBox('J\'accepte les conditions')
-        self.checkbox.setStyleSheet("""
-            margin-top: 10px;
-            margin-bottom: 10px;
-        """)
-        layout.addWidget(self.checkbox)
-
-        liste_label = QLabel('Sélectionnez une option')
-        liste_label.setStyleSheet('font-weight: bold;')
-        self.liste_deroulante = QComboBox()
-        self.liste_deroulante.addItems(['Option 1', 'Option 2', 'Option 3'])
-
-        layout.addWidget(liste_label)
-        layout.addWidget(self.liste_deroulante)
-
-        bouton_layout = QHBoxLayout()
-        self.bouton_valider = QPushButton('Valider')
-        self.bouton_valider.clicked.connect(self.valider)
+        # self.bouton_generer_lyrics = QPushButton('Générer Paroles de Chanson')
+        # self.bouton_generer_lyrics.clicked.connect(self.generer_lyrics)
+        # layout.addWidget(self.bouton_generer_lyrics)
+        #
+        # self.bouton_generer_structure = QPushButton('Générer Structure de Chanson')
+        # self.bouton_generer_structure.clicked.connect(self.generer_song_structure)
+        # layout.addWidget(self.bouton_generer_structure)
+        #
+        # self.bouton_generer_chords = QPushButton('Générer Progression d\'Accords')
+        # self.bouton_generer_chords.clicked.connect(self.generer_chord_progression)
+        # layout.addWidget(self.bouton_generer_chords)
+        #
+        # self.checkbox = QCheckBox('J\'accepte les conditions')
+        # self.checkbox.setStyleSheet("""
+        #     margin-top: 10px;
+        #     margin-bottom: 10px;
+        # """)
+        # layout.addWidget(self.checkbox)
+        #
+        # liste_label = QLabel('Sélectionnez une option')
+        # liste_label.setStyleSheet('font-weight: bold;')
+        # self.liste_deroulante = QComboBox()
+        # self.liste_deroulante.addItems(['Option 1', 'Option 2', 'Option 3'])
+        #
+        # layout.addWidget(liste_label)
+        # layout.addWidget(self.liste_deroulante)
+        #
+        # bouton_layout = QHBoxLayout()
+        # self.bouton_valider = QPushButton('Valider')
+        # self.bouton_valider.clicked.connect(self.valider)
 
         self.bouton_mode = QPushButton('🌙 Mode Sombre')
         self.bouton_mode.clicked.connect(self.toggle_theme)
 
-        bouton_layout.addWidget(self.bouton_valider)
-        bouton_layout.addWidget(self.bouton_mode)
+        # bouton_layout.addWidget(self.bouton_valider)
+        # bouton_layout.addWidget(self.bouton_mode)
 
-        layout.addLayout(bouton_layout)
+        # layout.addLayout(bouton_layout)
 
         # Add full composition button to the existing button creation method
         self.bouton_generer_composition = QPushButton('Générer Composition Complète')
