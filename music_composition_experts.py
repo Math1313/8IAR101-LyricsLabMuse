@@ -13,7 +13,6 @@ class MusicCompositionExperts:
             streaming=True
         )
 
-    # Expert Prompt Templates
     LYRICS_EXPERT_TEMPLATE = """
     Lyrics Composition Expert:
     Craft compelling lyrics based on the following parameters:
@@ -82,10 +81,40 @@ class MusicCompositionExperts:
     - Melodic development notes
     """
 
+
+    MAIN_COMPOSER_TEMPLATE = """
+    Main Composition Conductor:
+    Synthesize and integrate the following musical components into a cohesive song:
+
+    Musical Context:
+    - Style: {musical_style}
+    - Theme: {song_theme}
+    - Mood: {mood}
+    - Language: {language}
+
+    Provided Components:
+    Lyrics: {lyrics}
+    Chord Progression: {chord_progression}
+    Melodic Structure: {melody}
+
+    Composition Integration Directives:
+    1. Ensure seamless integration of lyrics, chords, and melody
+    2. Validate musical coherence and emotional consistency
+    3. Identify and resolve any potential compositional conflicts
+    4. Provide overarching narrative and musical flow analysis
+    5. Suggest potential refinements or artistic nuances
+
+    Deliver:
+    - Comprehensive song composition overview
+    - Structural analysis
+    - Emotional journey mapping
+    - Potential artistic interpretations
+    - Final composition notes
+    """
+
     def generate_song_composition(self, musical_style, song_theme, mood, language):
         """
-        Backward-compatible method that mimics the original
-        comprehensive song composition process.
+        Comprehensive song composition process with Main Composer integration.
 
         :return: Streaming generator for complete song composition
         """
@@ -93,11 +122,13 @@ class MusicCompositionExperts:
         lyrics_prompt = ChatPromptTemplate.from_template(self.LYRICS_EXPERT_TEMPLATE)
         chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
         melody_prompt = ChatPromptTemplate.from_template(self.MELODY_COMPOSITION_TEMPLATE)
+        main_composer_prompt = ChatPromptTemplate.from_template(self.MAIN_COMPOSER_TEMPLATE)
 
         # Create chains for each expert
         lyrics_chain = lyrics_prompt | self.llm | StrOutputParser()
         chord_chain = chord_prompt | self.llm | StrOutputParser()
         melody_chain = melody_prompt | self.llm | StrOutputParser()
+        main_composer_chain = main_composer_prompt | self.llm | StrOutputParser()
 
         # Generate lyrics first
         lyrics_stream = lyrics_chain.stream({
@@ -125,23 +156,34 @@ class MusicCompositionExperts:
         })
         melody_text = "".join(list(melody_stream))
 
-        # Stream the composition details
-        yield "🎵 Concept Analysis:\n"
+        # Main Composer final integration
+        main_composer_stream = main_composer_chain.stream({
+            "musical_style": musical_style,
+            "song_theme": song_theme,
+            "mood": mood,
+            "language": language,
+            "lyrics": lyrics_text,
+            "chord_progression": chord_text,
+            "melody": melody_text
+        })
+
+        # Stream the full composition details
+        yield "🎵 Song Composition Overview\n"
         yield f"Musical Style: {musical_style}\n"
         yield f"Song Theme: {song_theme}\n"
         yield f"Mood: {mood}\n"
         yield f"Language: {language}\n\n"
 
-        yield "--- Lyrics ---\n"
+        yield "--- Lyrics Creation ---\n"
         yield from lyrics_stream
-        yield "\n\n--- Song Structure ---\n"
+        yield "\n\n--- Chord Progression Development ---\n"
         yield chord_text
-        yield "\n\n--- Chord Progression ---\n"
-        yield from chord_stream
         yield "\n\n--- Melodic Structure ---\n"
-        yield from melody_stream
+        yield melody_text
+        yield "\n\n--- Main Composer's Final Composition ---\n"
+        yield from main_composer_stream
 
-    # Maintain existing methods for compatibility
+    # Existing methods remain the same...
     def generate_lyrics(self, musical_style, song_theme, mood, language):
         song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
         return (chunk for chunk in song_composition if "Lyrics:" in chunk)
