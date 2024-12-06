@@ -1,14 +1,15 @@
-import sys
-import os
+from music_composition_experts import MusicCompositionExperts
+from llm_integration import LLMIntegration
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QCheckBox, QComboBox, QVBoxLayout, QPushButton,
                              QHBoxLayout, QFrame, QMessageBox, QTextEdit, QScrollArea)
-from PyQt5.QtGui import QFont, QPalette, QColor
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+import os
+import sys
 
 # Importation de notre module d'intégration ChatGPT
-from llm_integration import LLMIntegration
-from music_composition_experts import MusicCompositionExperts
+
 
 class StreamThread(QThread):
     """Thread pour gérer le streaming de ChatGPT"""
@@ -34,6 +35,7 @@ class StreamThread(QThread):
         except Exception as e:
             self.chunk_ready.emit(f"Erreur : {str(e)}")
             self.stream_complete.emit()
+
 
 class ModernInterface(QWidget):
     def __init__(self):
@@ -168,7 +170,8 @@ class ModernInterface(QWidget):
 
         self.full_composition_field = QTextEdit()
         self.full_composition_field.setReadOnly(True)
-        self.full_composition_field.setPlaceholderText('La composition complète sera générée ici')
+        self.full_composition_field.setPlaceholderText(
+            'La composition complète sera générée ici')
 
         full_composition_layout = QVBoxLayout()
         full_composition_layout.addWidget(full_composition_label)
@@ -217,8 +220,10 @@ class ModernInterface(QWidget):
         # layout.addLayout(bouton_layout)
 
         # Add full composition button to the existing button creation method
-        self.bouton_generer_composition = QPushButton('Générer Composition Complète')
-        self.bouton_generer_composition.clicked.connect(self.generer_full_composition)
+        self.bouton_generer_composition = QPushButton(
+            'Générer Composition Complète')
+        self.bouton_generer_composition.clicked.connect(
+            self.generer_full_composition)
         layout.addWidget(self.bouton_generer_composition)
 
     def initialize_llm(self):
@@ -236,7 +241,8 @@ class ModernInterface(QWidget):
 
         # Vérifier que les champs ne sont pas vides
         if not musicalStyle or not songTheme or not mood or not language:
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs nécessaires")
+            QMessageBox.warning(
+                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
             return
 
         # Réinitialiser le champ de lyrics
@@ -247,7 +253,8 @@ class ModernInterface(QWidget):
             self.streaming_thread.terminate()
 
         # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread('generate_lyrics', musicalStyle, songTheme, mood, language)
+        self.streaming_thread = StreamThread(
+            'generate_lyrics', musicalStyle, songTheme, mood, language)
         self.streaming_thread.chunk_ready.connect(self.update_lyrics_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)
         self.streaming_thread.start()
@@ -261,7 +268,8 @@ class ModernInterface(QWidget):
 
         # Vérifier que les champs ne sont pas vides
         if not musicalStyle or not songTheme or not mood or not language:
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs nécessaires")
+            QMessageBox.warning(
+                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
             return
 
         # Réinitialiser le champ de structure
@@ -272,8 +280,10 @@ class ModernInterface(QWidget):
             self.streaming_thread.terminate()
 
         # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread('generate_song_structure', musicalStyle, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(self.update_structure_streaming)
+        self.streaming_thread = StreamThread(
+            'generate_song_structure', musicalStyle, songTheme, mood, language)
+        self.streaming_thread.chunk_ready.connect(
+            self.update_structure_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)
         self.streaming_thread.start()
 
@@ -286,7 +296,8 @@ class ModernInterface(QWidget):
 
         # Vérifier que les champs ne sont pas vides
         if not musicalStyle or not songTheme or not mood or not language:
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs nécessaires")
+            QMessageBox.warning(
+                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
             return
 
         # Réinitialiser le champ de chords
@@ -297,7 +308,8 @@ class ModernInterface(QWidget):
             self.streaming_thread.terminate()
 
         # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread('generate_chord_progression', musicalStyle, songTheme, mood, language)
+        self.streaming_thread = StreamThread(
+            'generate_chord_progression', musicalStyle, songTheme, mood, language)
         self.streaming_thread.chunk_ready.connect(self.update_chords_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)
         self.streaming_thread.start()
@@ -311,7 +323,8 @@ class ModernInterface(QWidget):
 
         # Vérifier que les champs ne sont pas vides
         if not musicalStyle or not songTheme or not mood or not language:
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs nécessaires")
+            QMessageBox.warning(
+                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
             return
 
         # Réinitialiser le champ de composition complète
@@ -322,8 +335,10 @@ class ModernInterface(QWidget):
             self.streaming_thread.terminate()
 
         # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread('generate_song_composition', musicalStyle, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(self.update_full_composition_streaming)
+        self.streaming_thread = StreamThread(
+            'generate_song_composition', musicalStyle, songTheme, mood, language)
+        self.streaming_thread.chunk_ready.connect(
+            self.update_full_composition_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)
         self.streaming_thread.start()
 
@@ -469,9 +484,11 @@ class ModernInterface(QWidget):
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
             msg.setText("Formulaire Validé")
-            msg.setInformativeText("\n".join([f"{k}: {v}" for k, v in resultats.items()]))
+            msg.setInformativeText(
+                "\n".join([f"{k}: {v}" for k, v in resultats.items()]))
             msg.setWindowTitle("Succès")
             msg.exec_()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
