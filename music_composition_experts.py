@@ -3,6 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 
+
 class MusicCompositionExperts:
     def __init__(self):
         # Initialize the base LLM with streaming capabilities
@@ -81,7 +82,6 @@ class MusicCompositionExperts:
     - Melodic development notes
     """
 
-
     MAIN_COMPOSER_TEMPLATE = """
     Main Composition Conductor:
     Synthesize and integrate the following musical components into a cohesive song:
@@ -119,10 +119,14 @@ class MusicCompositionExperts:
         :return: Streaming generator for complete song composition
         """
         # Create prompt templates for each expert
-        lyrics_prompt = ChatPromptTemplate.from_template(self.LYRICS_EXPERT_TEMPLATE)
-        chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
-        melody_prompt = ChatPromptTemplate.from_template(self.MELODY_COMPOSITION_TEMPLATE)
-        main_composer_prompt = ChatPromptTemplate.from_template(self.MAIN_COMPOSER_TEMPLATE)
+        lyrics_prompt = ChatPromptTemplate.from_template(
+            self.LYRICS_EXPERT_TEMPLATE)
+        chord_prompt = ChatPromptTemplate.from_template(
+            self.CHORD_PROGRESSION_TEMPLATE)
+        melody_prompt = ChatPromptTemplate.from_template(
+            self.MELODY_COMPOSITION_TEMPLATE)
+        main_composer_prompt = ChatPromptTemplate.from_template(
+            self.MAIN_COMPOSER_TEMPLATE)
 
         # Create chains for each expert
         lyrics_chain = lyrics_prompt | self.llm | StrOutputParser()
@@ -185,17 +189,21 @@ class MusicCompositionExperts:
 
     # Existing methods remain the same...
     def generate_lyrics(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
+        song_composition = self.generate_song_composition(
+            musical_style, song_theme, mood, language)
         return (chunk for chunk in song_composition if "Lyrics:" in chunk)
 
     def generate_song_structure(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
+        song_composition = self.generate_song_composition(
+            musical_style, song_theme, mood, language)
         return (chunk for chunk in song_composition if "Song Structure:" in chunk)
 
     def generate_chord_progression(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
+        song_composition = self.generate_song_composition(
+            musical_style, song_theme, mood, language)
         return (chunk for chunk in song_composition if "Chord Progression:" in chunk)
 
     def generate_melody(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
+        song_composition = self.generate_song_composition(
+            musical_style, song_theme, mood, language)
         return (chunk for chunk in song_composition if "Melodic Structure:" in chunk)

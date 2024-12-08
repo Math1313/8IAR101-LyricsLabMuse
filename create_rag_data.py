@@ -24,7 +24,7 @@ def split_text(documents: list[Document]):
     # Initialize text splitter with specified parameters
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=200,  # Size of each chunk in characters
-        chunk_overlap=50,  # Overlap between consecutive chunks
+        chunk_overlap=150,  # Overlap between consecutive chunks
         length_function=len,  # Function to compute the length of the text
         add_start_index=True,  # Flag to add start index to each chunk
     )
