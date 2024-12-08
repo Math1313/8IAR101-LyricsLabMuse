@@ -8,6 +8,7 @@ import sys
 
 # Importation de notre module d'intégration ChatGPT
 from music_composition_experts import MusicCompositionExperts
+import rag_helper as RagHelper
 
 
 class StreamThread(QThread):
@@ -264,6 +265,9 @@ class ModernInterface(QWidget):
         songTheme = self.text_fields[1].text()
         mood = self.text_fields[2].text()
         language = self.text_fields[3].text()
+        structure = RagHelper.query_rag(
+            self.chatgpt_integration.llm, musicalStyle
+        )
 
         # Vérifier que les champs ne sont pas vides
         if not musicalStyle or not songTheme or not mood or not language:
@@ -280,7 +284,7 @@ class ModernInterface(QWidget):
 
         # Créer et lancer un nouveau thread de streaming
         self.streaming_thread = StreamThread(
-            'generate_song_structure', musicalStyle, songTheme, mood, language)
+            'generate_song_structure', musicalStyle, structure, songTheme, mood, language)
         self.streaming_thread.chunk_ready.connect(
             self.update_structure_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)
@@ -319,6 +323,9 @@ class ModernInterface(QWidget):
         songTheme = self.text_fields[1].text()
         mood = self.text_fields[2].text()
         language = self.text_fields[3].text()
+        structure = RagHelper.query_rag(
+            self.chatgpt_integration.llm, musicalStyle
+        )
 
         # Vérifier que les champs ne sont pas vides
         if not musicalStyle or not songTheme or not mood or not language:
@@ -335,7 +342,7 @@ class ModernInterface(QWidget):
 
         # Créer et lancer un nouveau thread de streaming
         self.streaming_thread = StreamThread(
-            'generate_song_composition', musicalStyle, songTheme, mood, language)
+            'generate_song_composition', musicalStyle, structure, songTheme, mood, language)
         self.streaming_thread.chunk_ready.connect(
             self.update_full_composition_streaming)
         self.streaming_thread.stream_complete.connect(self.on_stream_complete)

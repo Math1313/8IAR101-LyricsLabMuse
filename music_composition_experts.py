@@ -2,13 +2,16 @@ import os
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
+from dotenv import load_dotenv
 
 
 class MusicCompositionExperts:
+    load_dotenv()
+
     def __init__(self):
         self.llm = ChatOpenAI(
             temperature=0.3,
-            base_url="http://localhost:1234/v1/",
+            base_url=os.getenv('MODEL_URL'),
             api_key="not-needed",
             streaming=True
         )
@@ -19,6 +22,7 @@ class MusicCompositionExperts:
         Provide ONLY these parameters in this exact format:
 
         [Musical Parameters]
+        Structure: {structure}
         Tempo: (specific BPM, e.g., "120 BPM")
         Key: (specific key, e.g., "C major" or "A minor")
         Time Signature: (e.g., "4/4" or "3/4")
@@ -35,16 +39,14 @@ class MusicCompositionExperts:
     LYRICS_EXPERT_TEMPLATE = """
         You are a professional lyricist. Create structured lyrics based on:
         Musical Style: {musical_style}
+        Structure: {structure}
         Song Theme: {song_theme}
         Mood: {mood}
         Language: {language}
         Musical Parameters: {musical_params}
 
         Create a song with EXACTLY this structure:
-        - 2 verses (4-8 lines each)
-        - 1 chorus (4-6 lines, repeated twice)
-        - 1 optional bridge (4 lines max)
-        - 1 final chorus
+        {structure}
 
         Format with section labels and exact line counts in brackets:
         [Verse 1] [8 lines]
@@ -61,6 +63,8 @@ class MusicCompositionExperts:
 
         [Final Chorus]
         (same as first chorus)
+
+        Show ONLY the lyrics for each section. Do not include any other content.
         """
 
     CHORD_PROGRESSION_TEMPLATE = """
@@ -120,10 +124,11 @@ class MusicCompositionExperts:
         Range: (specific note range)
         """
 
-    def generate_lyrics(self, musical_style, song_theme, mood, language):
+    def generate_lyrics(self, musical_style, structure, song_theme, mood, language):
         """Generate only the lyrics section of the song."""
         # First get musical parameters
-        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
+        params_prompt = ChatPromptTemplate.from_template(
+            self.MUSICAL_PARAMETERS_TEMPLATE)
         params_chain = params_prompt | self.llm | StrOutputParser()
 
         musical_params = ""
@@ -134,12 +139,14 @@ class MusicCompositionExperts:
             musical_params += chunk
 
         # Then generate lyrics with the parameters
-        lyrics_prompt = ChatPromptTemplate.from_template(self.LYRICS_EXPERT_TEMPLATE)
+        lyrics_prompt = ChatPromptTemplate.from_template(
+            self.LYRICS_EXPERT_TEMPLATE)
         lyrics_chain = lyrics_prompt | self.llm | StrOutputParser()
 
         yield "## LYRICS\n\n"
         for chunk in lyrics_chain.stream({
             "musical_style": musical_style,
+            "structure": structure,
             "song_theme": song_theme,
             "mood": mood,
             "language": language,
@@ -150,7 +157,8 @@ class MusicCompositionExperts:
     def generate_chord_progression(self, musical_style, song_theme, mood, language):
         """Generate only the chord progression section."""
         # First get musical parameters
-        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
+        params_prompt = ChatPromptTemplate.from_template(
+            self.MUSICAL_PARAMETERS_TEMPLATE)
         params_chain = params_prompt | self.llm | StrOutputParser()
 
         musical_params = ""
@@ -168,8 +176,9 @@ class MusicCompositionExperts:
                 key = line.split("Key:")[1].strip()
             elif "Time Signature:" in line:
                 time_signature = line.split("Time Signature:")[1].strip()
-                
-        chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
+
+        chord_prompt = ChatPromptTemplate.from_template(
+            self.CHORD_PROGRESSION_TEMPLATE)
         chord_chain = chord_prompt | self.llm | StrOutputParser()
 
         yield "## CHORD PROGRESSION\n\n"
@@ -185,7 +194,8 @@ class MusicCompositionExperts:
     def generate_melody(self, musical_style, song_theme, mood, language):
         """Generate only the melody section."""
         # First get musical parameters
-        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
+        params_prompt = ChatPromptTemplate.from_template(
+            self.MUSICAL_PARAMETERS_TEMPLATE)
         params_chain = params_prompt | self.llm | StrOutputParser()
 
         musical_params = ""
@@ -204,7 +214,8 @@ class MusicCompositionExperts:
             elif "Tempo:" in line:
                 tempo = line.split("Tempo:")[1].strip()
 
-        melody_prompt = ChatPromptTemplate.from_template(self.MELODY_COMPOSITION_TEMPLATE)
+        melody_prompt = ChatPromptTemplate.from_template(
+            self.MELODY_COMPOSITION_TEMPLATE)
         melody_chain = melody_prompt | self.llm | StrOutputParser()
 
         yield "## MELODY\n\n"
@@ -217,11 +228,11 @@ class MusicCompositionExperts:
         }):
             yield chunk
 
-    def generate_song_structure(self, musical_style, song_theme, mood, language):
+    def generate_song_structure(self, musical_style, structure, song_theme, mood, language):
         """Generate the complete song structure with all musical parameters."""
         # We'll use the full song composition and extract the combined view
         composition_generator = self.generate_song_composition(
-            musical_style, song_theme, mood, language
+            musical_style, structure, song_theme, mood, language
         )
 
         in_complete_structure = False
@@ -232,13 +243,17 @@ class MusicCompositionExperts:
             elif in_complete_structure:
                 yield chunk
 
-    def generate_song_composition(self, musical_style, song_theme, mood, language):
+    def generate_song_composition(self, musical_style, structure, song_theme, mood, language):
         """Generate a complete song composition with musical parameters."""
         # Create prompt templates
-        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
-        lyrics_prompt = ChatPromptTemplate.from_template(self.LYRICS_EXPERT_TEMPLATE)
-        chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
-        melody_prompt = ChatPromptTemplate.from_template(self.MELODY_COMPOSITION_TEMPLATE)
+        params_prompt = ChatPromptTemplate.from_template(
+            self.MUSICAL_PARAMETERS_TEMPLATE)
+        lyrics_prompt = ChatPromptTemplate.from_template(
+            self.LYRICS_EXPERT_TEMPLATE)
+        chord_prompt = ChatPromptTemplate.from_template(
+            self.CHORD_PROGRESSION_TEMPLATE)
+        melody_prompt = ChatPromptTemplate.from_template(
+            self.MELODY_COMPOSITION_TEMPLATE)
 
         # Create chains
         params_chain = params_prompt | self.llm | StrOutputParser()
@@ -249,6 +264,7 @@ class MusicCompositionExperts:
         # Generate header
         yield f"""# Song Composition
             Musical Style: {musical_style}
+            Structure: {structure}
             Theme: {song_theme}
             Mood: {mood}
             Language: {language}
@@ -258,6 +274,7 @@ class MusicCompositionExperts:
         musical_params = ""
         for chunk in params_chain.stream({
             "musical_style": musical_style,
+            "structure": structure,
             "mood": mood
         }):
             musical_params += chunk
@@ -283,6 +300,7 @@ class MusicCompositionExperts:
         lyrics_text = ""
         for chunk in lyrics_chain.stream({
             "musical_style": musical_style,
+            "structure": structure,
             "song_theme": song_theme,
             "mood": mood,
             "language": language,
@@ -446,7 +464,8 @@ class MusicCompositionExperts:
                 if any(label in line for label in
                        ["Chord sequence:", "Duration:", "Rhythm:", "Scale:", "Contour:", "Range:", "Syncopation:",
                         "Peak Notes:"]):
-                    content = lines[i + 1].strip() if i + 1 < len(lines) else ""
+                    content = lines[i + 1].strip() if i + \
+                        1 < len(lines) else ""
                     if content and not content.startswith('['):
                         current_content.append(content)
                     i += 2
@@ -459,5 +478,5 @@ class MusicCompositionExperts:
         # Save the last section
         if current_section and current_content:
             sections[current_section] = '\n'.join(current_content)
-            
+
         return sections
