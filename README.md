@@ -10,5 +10,11 @@
     ```
 - Install requiered libraries
     ```
-    pip install -r requierements.txt
+    pip install -r requirements.txt
     ```
+
+## TODO
+
+### Problème avec le output (chords/lyrics/melody) -> on a plustot une analyse de la chanson
+### Implémenter le output audiogen
+### 
