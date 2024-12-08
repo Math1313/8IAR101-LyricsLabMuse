@@ -7,7 +7,7 @@ from langchain.schema import Document
 from langchain_chroma import Chroma
 
 CHROMA_PATH = "./chroma/"
-DATA_PATH = "./data/"
+DATA_PATH = "./ragData/"
 
 embedding_function = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -23,8 +23,8 @@ def split_text(documents: list[Document]):
     """
     # Initialize text splitter with specified parameters
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=400,  # Size of each chunk in characters
-        chunk_overlap=100,  # Overlap between consecutive chunks
+        chunk_size=200,  # Size of each chunk in characters
+        chunk_overlap=150,  # Overlap between consecutive chunks
         length_function=len,  # Function to compute the length of the text
         add_start_index=True,  # Flag to add start index to each chunk
     )

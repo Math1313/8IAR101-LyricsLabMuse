@@ -168,7 +168,7 @@ class MusicCompositionExperts:
                 key = line.split("Key:")[1].strip()
             elif "Time Signature:" in line:
                 time_signature = line.split("Time Signature:")[1].strip()
-
+                
         chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
         chord_chain = chord_prompt | self.llm | StrOutputParser()
 
@@ -252,7 +252,6 @@ class MusicCompositionExperts:
             Theme: {song_theme}
             Mood: {mood}
             Language: {language}
-            
             """
         # 1. Generate Musical Parameters
         yield "## 1. MUSICAL PARAMETERS\n\n"
@@ -460,5 +459,5 @@ class MusicCompositionExperts:
         # Save the last section
         if current_section and current_content:
             sections[current_section] = '\n'.join(current_content)
-
+            
         return sections
