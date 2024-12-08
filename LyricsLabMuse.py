@@ -9,7 +9,7 @@ import os
 import sys
 
 # Importation de notre module d'intégration ChatGPT
-
+from music_composition_experts import MusicCompositionExperts
 
 class StreamThread(QThread):
     """Thread pour gérer le streaming de ChatGPT"""
