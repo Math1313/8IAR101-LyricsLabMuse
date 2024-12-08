@@ -7,7 +7,7 @@ from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 # Importation de notre module d'intégration ChatGPT
-from llm_integration import LLMIntegration
+# from llm_integration import LLMIntegration
 from music_composition_experts import MusicCompositionExperts
 
 class StreamThread(QThread):
