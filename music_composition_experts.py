@@ -3,199 +3,462 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 
+
 class MusicCompositionExperts:
     def __init__(self):
-        # Initialize the base LLM with streaming capabilities
         self.llm = ChatOpenAI(
-            temperature=0.3,  # Slightly higher for creative variation
+            temperature=0.3,
             base_url="http://localhost:1234/v1/",
             api_key="not-needed",
             streaming=True
         )
 
+    MUSICAL_PARAMETERS_TEMPLATE = """
+        You are a music producer. Define the technical parameters for a {musical_style} song with a {mood} mood.
+
+        Provide ONLY these parameters in this exact format:
+
+        [Musical Parameters]
+        Tempo: (specific BPM, e.g., "120 BPM")
+        Key: (specific key, e.g., "C major" or "A minor")
+        Time Signature: (e.g., "4/4" or "3/4")
+        Genre-Specific Feel: (e.g., "Shuffle", "Straight", "Swing")
+        Dynamic Level: (e.g., "Medium-loud", "Soft", "Building")
+        Suggested Sound: (e.g., "Warm analog", "Modern digital", "Raw acoustic")
+
+        [Production Notes]
+        Main Instruments: (list 3-4 key instruments)
+        Effects: (list 2-3 key effects)
+        Mix Focus: (e.g., "Bass-heavy", "Vocal-forward", "Balanced")
+        """
+
     LYRICS_EXPERT_TEMPLATE = """
-    Lyrics Composition Expert:
-    Craft compelling lyrics based on the following parameters:
+        You are a professional lyricist. Create structured lyrics based on:
+        Musical Style: {musical_style}
+        Song Theme: {song_theme}
+        Mood: {mood}
+        Language: {language}
+        Musical Parameters: {musical_params}
 
-    Musical Style: {musical_style}
-    Song Theme: {song_theme}
-    Mood: {mood}
-    Language: {language}
+        Create a song with EXACTLY this structure:
+        - 2 verses (4-8 lines each)
+        - 1 chorus (4-6 lines, repeated twice)
+        - 1 optional bridge (4 lines max)
+        - 1 final chorus
 
-    Lyric Composition Guidelines:
-    1. Capture the emotional essence of the theme
-    2. Maintain linguistic authenticity
-    3. Create a cohesive narrative
-    4. Align with the specified musical style
-    5. Reflect the intended mood
+        Format with section labels and exact line counts in brackets:
+        [Verse 1] [8 lines]
+        (write verse)
 
-    Deliver:
-    - Verse lyrics
-    - Chorus lyrics
-    - Bridge (if applicable)
-    - Thematic coherence explanation
-    """
+        [Chorus] [4-6 lines]
+        (write chorus)
+
+        [Verse 2] [8 lines]
+        (write verse)
+
+        [Bridge] (optional) [4 lines max]
+        (write bridge if appropriate)
+
+        [Final Chorus]
+        (same as first chorus)
+        """
 
     CHORD_PROGRESSION_TEMPLATE = """
-    Chord Progression Architect:
-    Design a chord progression that complements the lyrical and emotional landscape:
+        You are a professional music composer. Create chord progressions matching:
+        Musical Parameters: {musical_params}
+        Key: {key}
+        Style: {musical_style}
+        Mood: {mood}
 
-    Derived from Lyrics: {lyrics_context}
-    Musical Style: {musical_style}
-    Mood: {mood}
+        Provide chord progressions in this format:
 
-    Chord Progression Requirements:
-    1. Harmonic support for emotional arc
-    2. Genre-specific chord choices
-    3. Dynamic tonal variations
-    4. Rhythmic compatibility
-    5. Melodic potential enhancement
+        [Verse] [{time_signature}]
+        Chord sequence: (4-8 chords, using the specified key)
+        Duration: (in bars)
+        Rhythm: (straight, syncopated, etc.)
 
-    Deliver:
-    - Verse chord progression
-    - Chorus chord progression
-    - Bridge chord progression
-    - Harmonic reasoning
-    """
+        [Chorus] [{time_signature}]
+        Chord sequence: (4-8 chords)
+        Duration: (in bars)
+        Rhythm: (pattern description)
+
+        [Bridge] [{time_signature}]
+        Chord sequence: (4 chords max)
+        Duration: (in bars)
+        Rhythm: (pattern description)
+
+        Use proper chord notation for {key}. Include any specific rhythmic accents.
+        """
 
     MELODY_COMPOSITION_TEMPLATE = """
-    Melody Composition Specialist:
-    Create a melodic structure that interweaves with the lyrics and chord progression:
+        You are a melody composer. Create a melody matching:
+        Musical Parameters: {musical_params}
+        Key: {key}
+        Tempo: {tempo}
+        Style: {musical_style}
 
-    Lyrics: {lyrics}
-    Chord Progression: {chord_progression}
-    Musical Style: {musical_style}
-    Mood: {mood}
+        Provide melody details for each section:
 
-    Melody Design Principles:
-    1. Complement lyrical phrasing
-    2. Align with chord harmonic structure
-    3. Reflect musical style nuances
-    4. Emphasize emotional peaks
-    5. Ensure singability and memorability
+        [Verse Melody]
+        Scale: (based on {key})
+        Contour: (melodic movement)
+        Rhythm: (based on {tempo} BPM)
+        Range: (specific note range)
+        Syncopation: (yes/no, description)
 
-    Deliver:
-    - Verse melody description
-    - Chorus melody description
-    - Bridge melody concept
-    - Melodic development notes
-    """
+        [Chorus Melody]
+        Scale: (based on {key})
+        Contour: (melodic movement)
+        Rhythm: (based on {tempo} BPM)
+        Range: (specific note range)
+        Peak Notes: (climax points)
 
-
-    MAIN_COMPOSER_TEMPLATE = """
-    Main Composition Conductor:
-    Synthesize and integrate the following musical components into a cohesive song:
-
-    Musical Context:
-    - Style: {musical_style}
-    - Theme: {song_theme}
-    - Mood: {mood}
-    - Language: {language}
-
-    Provided Components:
-    Lyrics: {lyrics}
-    Chord Progression: {chord_progression}
-    Melodic Structure: {melody}
-
-    Composition Integration Directives:
-    1. Ensure seamless integration of lyrics, chords, and melody
-    2. Validate musical coherence and emotional consistency
-    3. Identify and resolve any potential compositional conflicts
-    4. Provide overarching narrative and musical flow analysis
-    5. Suggest potential refinements or artistic nuances
-
-    Deliver:
-    - Comprehensive song composition overview
-    - Structural analysis
-    - Emotional journey mapping
-    - Potential artistic interpretations
-    - Final composition notes
-    """
-
-    def generate_song_composition(self, musical_style, song_theme, mood, language):
+        [Bridge Melody]
+        Scale: (based on {key})
+        Contour: (melodic movement)
+        Rhythm: (based on {tempo} BPM)
+        Range: (specific note range)
         """
-        Comprehensive song composition process with Main Composer integration.
 
-        :return: Streaming generator for complete song composition
-        """
-        # Create prompt templates for each expert
+    def generate_lyrics(self, musical_style, song_theme, mood, language):
+        """Generate only the lyrics section of the song."""
+        # First get musical parameters
+        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
+        params_chain = params_prompt | self.llm | StrOutputParser()
+
+        musical_params = ""
+        for chunk in params_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood
+        }):
+            musical_params += chunk
+
+        # Then generate lyrics with the parameters
         lyrics_prompt = ChatPromptTemplate.from_template(self.LYRICS_EXPERT_TEMPLATE)
-        chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
-        melody_prompt = ChatPromptTemplate.from_template(self.MELODY_COMPOSITION_TEMPLATE)
-        main_composer_prompt = ChatPromptTemplate.from_template(self.MAIN_COMPOSER_TEMPLATE)
-
-        # Create chains for each expert
         lyrics_chain = lyrics_prompt | self.llm | StrOutputParser()
-        chord_chain = chord_prompt | self.llm | StrOutputParser()
-        melody_chain = melody_prompt | self.llm | StrOutputParser()
-        main_composer_chain = main_composer_prompt | self.llm | StrOutputParser()
 
-        # Generate lyrics first
-        lyrics_stream = lyrics_chain.stream({
-            "musical_style": musical_style,
-            "song_theme": song_theme,
-            "mood": mood,
-            "language": language
-        })
-        lyrics_text = "".join(list(lyrics_stream))
-
-        # Generate chord progression with lyrics context
-        chord_stream = chord_chain.stream({
-            "lyrics_context": lyrics_text,
-            "musical_style": musical_style,
-            "mood": mood
-        })
-        chord_text = "".join(list(chord_stream))
-
-        # Generate melody with lyrics and chord progression context
-        melody_stream = melody_chain.stream({
-            "lyrics": lyrics_text,
-            "chord_progression": chord_text,
-            "musical_style": musical_style,
-            "mood": mood
-        })
-        melody_text = "".join(list(melody_stream))
-
-        # Main Composer final integration
-        main_composer_stream = main_composer_chain.stream({
+        yield "## LYRICS\n\n"
+        for chunk in lyrics_chain.stream({
             "musical_style": musical_style,
             "song_theme": song_theme,
             "mood": mood,
             "language": language,
-            "lyrics": lyrics_text,
-            "chord_progression": chord_text,
-            "melody": melody_text
-        })
-
-        # Stream the full composition details
-        yield "🎵 Song Composition Overview\n"
-        yield f"Musical Style: {musical_style}\n"
-        yield f"Song Theme: {song_theme}\n"
-        yield f"Mood: {mood}\n"
-        yield f"Language: {language}\n\n"
-
-        yield "--- Lyrics Creation ---\n"
-        yield from lyrics_stream
-        yield "\n\n--- Chord Progression Development ---\n"
-        yield chord_text
-        yield "\n\n--- Melodic Structure ---\n"
-        yield melody_text
-        yield "\n\n--- Main Composer's Final Composition ---\n"
-        yield from main_composer_stream
-
-    # Existing methods remain the same...
-    def generate_lyrics(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
-        return (chunk for chunk in song_composition if "Lyrics:" in chunk)
-
-    def generate_song_structure(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
-        return (chunk for chunk in song_composition if "Song Structure:" in chunk)
+            "musical_params": musical_params
+        }):
+            yield chunk
 
     def generate_chord_progression(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
-        return (chunk for chunk in song_composition if "Chord Progression:" in chunk)
+        """Generate only the chord progression section."""
+        # First get musical parameters
+        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
+        params_chain = params_prompt | self.llm | StrOutputParser()
+
+        musical_params = ""
+        for chunk in params_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood
+        }):
+            musical_params += chunk
+
+        # Extract key and time signature
+        key = "C major"  # Default
+        time_signature = "4/4"  # Default
+        for line in musical_params.split('\n'):
+            if "Key:" in line:
+                key = line.split("Key:")[1].strip()
+            elif "Time Signature:" in line:
+                time_signature = line.split("Time Signature:")[1].strip()
+
+        chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
+        chord_chain = chord_prompt | self.llm | StrOutputParser()
+
+        yield "## CHORD PROGRESSION\n\n"
+        for chunk in chord_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood,
+            "musical_params": musical_params,
+            "key": key,
+            "time_signature": time_signature
+        }):
+            yield chunk
 
     def generate_melody(self, musical_style, song_theme, mood, language):
-        song_composition = self.generate_song_composition(musical_style, song_theme, mood, language)
-        return (chunk for chunk in song_composition if "Melodic Structure:" in chunk)
+        """Generate only the melody section."""
+        # First get musical parameters
+        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
+        params_chain = params_prompt | self.llm | StrOutputParser()
+
+        musical_params = ""
+        for chunk in params_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood
+        }):
+            musical_params += chunk
+
+        # Extract key and tempo
+        key = "C major"  # Default
+        tempo = "120 BPM"  # Default
+        for line in musical_params.split('\n'):
+            if "Key:" in line:
+                key = line.split("Key:")[1].strip()
+            elif "Tempo:" in line:
+                tempo = line.split("Tempo:")[1].strip()
+
+        melody_prompt = ChatPromptTemplate.from_template(self.MELODY_COMPOSITION_TEMPLATE)
+        melody_chain = melody_prompt | self.llm | StrOutputParser()
+
+        yield "## MELODY\n\n"
+        for chunk in melody_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood,
+            "musical_params": musical_params,
+            "key": key,
+            "tempo": tempo
+        }):
+            yield chunk
+
+    def generate_song_structure(self, musical_style, song_theme, mood, language):
+        """Generate the complete song structure with all musical parameters."""
+        # We'll use the full song composition and extract the combined view
+        composition_generator = self.generate_song_composition(
+            musical_style, song_theme, mood, language
+        )
+
+        in_complete_structure = False
+        for chunk in composition_generator:
+            if "## 5. COMPLETE SONG STRUCTURE" in chunk:
+                in_complete_structure = True
+                yield "## SONG STRUCTURE\n\n"
+            elif in_complete_structure:
+                yield chunk
+
+    def generate_song_composition(self, musical_style, song_theme, mood, language):
+        """Generate a complete song composition with musical parameters."""
+        # Create prompt templates
+        params_prompt = ChatPromptTemplate.from_template(self.MUSICAL_PARAMETERS_TEMPLATE)
+        lyrics_prompt = ChatPromptTemplate.from_template(self.LYRICS_EXPERT_TEMPLATE)
+        chord_prompt = ChatPromptTemplate.from_template(self.CHORD_PROGRESSION_TEMPLATE)
+        melody_prompt = ChatPromptTemplate.from_template(self.MELODY_COMPOSITION_TEMPLATE)
+
+        # Create chains
+        params_chain = params_prompt | self.llm | StrOutputParser()
+        lyrics_chain = lyrics_prompt | self.llm | StrOutputParser()
+        chord_chain = chord_prompt | self.llm | StrOutputParser()
+        melody_chain = melody_prompt | self.llm | StrOutputParser()
+
+        # Generate header
+        yield f"""# Song Composition
+            Musical Style: {musical_style}
+            Theme: {song_theme}
+            Mood: {mood}
+            Language: {language}
+            
+            """
+        # 1. Generate Musical Parameters
+        yield "## 1. MUSICAL PARAMETERS\n\n"
+        musical_params = ""
+        for chunk in params_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood
+        }):
+            musical_params += chunk
+            yield chunk
+        yield "\n\n"
+
+        # Extract key parameters for use in other sections
+        key = "C major"  # Default values
+        tempo = "120 BPM"
+        time_signature = "4/4"
+
+        # Parse the musical_params to extract actual values
+        for line in musical_params.split('\n'):
+            if "Key:" in line:
+                key = line.split("Key:")[1].strip()
+            elif "Tempo:" in line:
+                tempo = line.split("Tempo:")[1].strip()
+            elif "Time Signature:" in line:
+                time_signature = line.split("Time Signature:")[1].strip()
+
+        # 2. Generate Lyrics with musical parameters
+        yield "## 2. LYRICS\n\n"
+        lyrics_text = ""
+        for chunk in lyrics_chain.stream({
+            "musical_style": musical_style,
+            "song_theme": song_theme,
+            "mood": mood,
+            "language": language,
+            "musical_params": musical_params
+        }):
+            lyrics_text += chunk
+            yield chunk
+        yield "\n\n"
+
+        # 3. Generate Chords with musical parameters
+        yield "## 3. CHORD PROGRESSION\n\n"
+        chord_text = ""
+        for chunk in chord_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood,
+            "musical_params": musical_params,
+            "key": key,
+            "time_signature": time_signature
+        }):
+            chord_text += chunk
+            yield chunk
+        yield "\n\n"
+
+        # 4. Generate Melody with musical parameters
+        yield "## 4. MELODY\n\n"
+        melody_text = ""
+        for chunk in melody_chain.stream({
+            "musical_style": musical_style,
+            "mood": mood,
+            "musical_params": musical_params,
+            "key": key,
+            "tempo": tempo
+        }):
+            melody_text += chunk
+            yield chunk
+        yield "\n\n"
+
+        # 5. Generate Combined View
+        yield "## 5. COMPLETE SONG STRUCTURE\n\n"
+        yield f"""[Song Technical Parameters]
+        Key: {key}
+        Tempo: {tempo}
+        Time Signature: {time_signature}
+
+        """
+        # Store the generated content
+        lyrics_sections = self._split_into_sections(lyrics_text)
+        chord_sections = self._split_into_sections(chord_text)
+        melody_sections = self._split_into_sections(melody_text)
+
+        for section in ["Verse 1", "Chorus", "Verse 2", "Bridge", "Final Chorus"]:
+            yield f"[{section}]\n"
+
+            # Extract lyrics
+            yield "Lyrics:\n"
+            if section in lyrics_sections:
+                yield lyrics_sections[section] + "\n"
+            else:
+                yield "(No lyrics for this section)\n"
+
+            # Extract chords
+            yield "Chords:\n"
+            base_section = section.split()[0]  # "Verse 1" -> "Verse"
+            if base_section in chord_sections:
+                yield chord_sections[base_section] + "\n"
+            elif section in chord_sections:  # Try exact match
+                yield chord_sections[section] + "\n"
+            else:
+                yield "(No chord progression for this section)\n"
+
+            # Extract melody
+            yield "Melody:\n"
+            if base_section in melody_sections:
+                yield melody_sections[base_section] + "\n"
+            elif f"{base_section} Melody" in melody_sections:
+                yield melody_sections[f"{base_section} Melody"] + "\n"
+            else:
+                yield "(No melody for this section)\n"
+
+            yield "\n"
+
+    def _extract_section(self, text: str, section_name: str) -> str:
+        """
+        Extract a specific section from the text, handling various section formats.
+        Args:
+            text (str): The full text content
+            section_name (str): Name of the section to extract (e.g., "Verse 1", "Chorus")
+        Returns:
+            str: Extracted section content
+        """
+        lines = text.split('\n')
+        section_content = []
+        in_section = False
+
+        # Handle both exact matches and partial matches (e.g., "Verse" in "Verse 1")
+        section_identifiers = [
+            f"[{section_name}]",
+            f"[{section_name} Melody]",
+            f"[{section_name}] [",  # Match any time signature format
+        ]
+
+        for i, line in enumerate(lines):
+            # Check if we've found the section start
+            if any(identifier in line for identifier in section_identifiers):
+                in_section = True
+                continue
+
+            # Check if we've reached the next section
+            if in_section and line.strip().startswith('['):
+                break
+
+            # Collect content if we're in the right section
+            if in_section and line.strip():
+                # Remove labels like "Chord sequence:", "Scale:", etc.
+                content = line.strip()
+                for label in ["Chord sequence:", "Duration:", "Rhythm:", "Scale:", "Contour:", "Range:", "Syncopation:",
+                              "Peak Notes:"]:
+                    if content.startswith(label):
+                        content = content.replace(label, "").strip()
+                section_content.append(content)
+
+        return "\n".join(section_content) if section_content else "(Not found in this section)"
+
+    def _split_into_sections(self, text: str) -> dict:
+        """
+        Split the full text into a dictionary of sections with better section matching.
+        Args:
+            text (str): The full text content
+        Returns:
+            dict: Dictionary with section names as keys and content as values
+        """
+        sections = {}
+        current_section = None
+        current_content = []
+        in_section = False
+
+        lines = text.split('\n')
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Check for section headers
+            if line.startswith('[') and ']' in line:
+                # Save previous section if it exists
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+
+                # Extract new section name, handling time signatures
+                section_parts = line[1:].split(']')[0].split('[')
+                current_section = section_parts[0].strip()
+                if "Melody" in current_section:
+                    current_section = current_section.replace(" Melody", "")
+                current_content = []
+                in_section = True
+                i += 1
+                continue
+
+            # If we're in a section, collect content
+            if in_section and line:
+                # Skip labels and collect the actual content
+                if any(label in line for label in
+                       ["Chord sequence:", "Duration:", "Rhythm:", "Scale:", "Contour:", "Range:", "Syncopation:",
+                        "Peak Notes:"]):
+                    content = lines[i + 1].strip() if i + 1 < len(lines) else ""
+                    if content and not content.startswith('['):
+                        current_content.append(content)
+                    i += 2
+                    continue
+                elif not line.startswith('['):
+                    current_content.append(line)
+
+            i += 1
+
+        # Save the last section
+        if current_section and current_content:
+            sections[current_section] = '\n'.join(current_content)
+
+        return sections
