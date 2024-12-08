@@ -3,4 +3,6 @@ langchain
 PyQt5
 langchain_community
 langchain_openai
+langchain_huggingface
+langchain_chroma
 openai
