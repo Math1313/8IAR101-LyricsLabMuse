@@ -2,6 +2,8 @@ python-dotenv
 langchain
 PyQt5
 langchain_community
+chromadb
+sentence-transformers
 langchain_openai
 langchain_huggingface
 langchain_chroma

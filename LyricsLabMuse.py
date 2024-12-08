@@ -1,5 +1,3 @@
-from music_composition_experts import MusicCompositionExperts
-from llm_integration import LLMIntegration
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QPalette, QColor
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
@@ -10,6 +8,7 @@ import sys
 
 # Importation de notre module d'intégration ChatGPT
 from music_composition_experts import MusicCompositionExperts
+
 
 class StreamThread(QThread):
     """Thread pour gérer le streaming de ChatGPT"""
