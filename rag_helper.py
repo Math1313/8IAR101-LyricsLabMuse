@@ -9,6 +9,7 @@ load_dotenv()
 
 CHROMA_PATH = "./chroma/"
 DATA_PATH = "./ragData/"
+# TODO test + modif cette partie semble problématique
 PROMPT_TEMPLATE = """
 Give answer based only on the following context: {context}
 What is the {music_style} Music Typical Structure?
