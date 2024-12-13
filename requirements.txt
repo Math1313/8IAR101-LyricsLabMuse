@@ -11,3 +11,6 @@ openai
 pypdf
 
 requests~=2.32.3
+audiocraft
+torch
+torchaudio

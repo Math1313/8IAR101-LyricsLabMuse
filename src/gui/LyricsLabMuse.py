@@ -1,14 +1,17 @@
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt5.QtGui import QFont, QPalette, QColor
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
-                             QCheckBox, QComboBox, QVBoxLayout, QPushButton,
-                             QHBoxLayout, QFrame, QMessageBox, QTextEdit, QScrollArea)
-import os
+                             QVBoxLayout, QPushButton,
+                             QFrame, QMessageBox, QTextEdit, QScrollArea)
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+
 import sys
 
 # Importation de notre module d'intégration ChatGPT
-from music_composition_experts import MusicCompositionExperts
-import rag_helper as RagHelper
+from src.core.music_composition_experts import MusicCompositionExperts
+from src.core import rag_helper as RagHelper
+from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
+from audio_generation.audiocraft_generator import FullSongGenerator
+from src.gui.components.ui import AudioControls
 
 
 class StreamThread(QThread):
@@ -40,8 +43,11 @@ class StreamThread(QThread):
 class ModernInterface(QWidget):
     def __init__(self):
         super().__init__()
+        self.song_generator = FullSongGenerator()
+        self.media_player = QMediaPlayer()
         self.dark_mode = False
         self.streaming_thread = None
+        self.audio_controls = None
         self.initUI()
 
     def initUI(self):
@@ -64,12 +70,11 @@ class ModernInterface(QWidget):
 
         self.create_title(content_layout)
         self.create_input_sections(content_layout)
-        # self.create_lyrics_section(content_layout)
-        # self.create_song_structure_section(content_layout)
-        # self.create_chord_progression_section(content_layout)
         self.create_buttons(content_layout)
-        # Add a new method to create full composition section
         self.create_full_composition_section(content_layout)
+
+        # Add audio controls here
+        self.setup_audio(content_layout)  # Pass the layout as parameter
 
         scroll_area.setWidget(content_frame)
         main_layout.addWidget(scroll_area)
@@ -494,6 +499,58 @@ class ModernInterface(QWidget):
                 "\n".join([f"{k}: {v}" for k, v in resultats.items()]))
             msg.setWindowTitle("Succès")
             msg.exec_()
+
+    def generate_audio(self):
+        try:
+            # Get composition data from your existing generation
+            composition_data = self.chatgpt_integration.generate_song_composition(
+                self.text_fields[0].text(),  # musical_style
+                self.text_fields[1].text(),  # song_theme
+                self.text_fields[2].text(),  # mood
+                self.text_fields[3].text()  # language
+            )
+
+            # Format the data using your existing formatter
+            formatter = MusicCompositionExportFormatter()
+            formatted_data = formatter.generate_audio_export_metadata(
+                # ... your existing parameters ...
+            )
+
+            # Generate audio
+            result = self.song_generator.generate_full_song(formatted_data)
+
+            # Handle the generated audio (play or save)
+            self.handle_audio_output(result["instrumental"])
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Audio generation failed: {str(e)}")
+
+    def handle_audio_output(self, audio_path: str):
+        """Handle the generated audio file"""
+        try:
+            self.media_player = QMediaPlayer()
+            self.media_player.setMedia(
+                QMediaContent(QUrl.fromLocalFile(audio_path))
+            )
+            self.media_player.play()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Audio playback failed: {str(e)}")
+
+    def setup_audio(self, layout):
+        """Initialize and setup audio controls"""
+        self.audio_controls = AudioControls(self)
+        layout.addWidget(self.audio_controls)
+
+    def handle_audio_output(self, audio_path: str):
+        """Handle the generated audio file"""
+        try:
+            if self.audio_controls.load_audio(audio_path):
+                self.audio_controls.play_button.click()  # Start playing
+            else:
+                QMessageBox.warning(self, "Error", "Failed to load audio file")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Audio playback failed: {str(e)}")
 
 
 if __name__ == '__main__':

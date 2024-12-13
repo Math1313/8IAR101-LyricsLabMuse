@@ -16,7 +16,24 @@
     ```
     py create_rag_data.py
     ```
-
+## Switch env 
+- to see which env :
+  ```
+  where python
+  ```
+- to exit env:
+  ```
+  deactivate
+  ```
+- to activate env
+  ```
+  .\venv_name\Scripts\activate
+  ``` 
+- current environements
+  ``` 
+  .\venv\Scripts\activate
+  .\venv_audiocraft\Scripts\activate
+  ``` 
 [//]: # (TODO)
 ## TODO
 ### Problème avec le output (chords/lyrics/melody) -> on a plustot une analyse de la chanson
@@ -28,6 +45,5 @@ I want to know the number of verse, chorus, and bridge in a typical {music_style
 Do a list that looks like this:
 Intro - Verse - Chorus - Verse - etc...
 I just want the list.
-
 ### FILTRAGE VULGAIRE
-
+### audio_generation.json: modif URL & api key
