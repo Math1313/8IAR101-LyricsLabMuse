@@ -9,7 +9,7 @@ langchain_huggingface
 langchain_chroma
 openai
 pypdf
-
+numpy<2.0.0
 requests~=2.32.3
 audiocraft
 torch

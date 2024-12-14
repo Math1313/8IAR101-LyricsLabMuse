@@ -7,6 +7,7 @@ import os
 from typing import Dict, Optional, Tuple
 import logging
 
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -15,17 +16,30 @@ class AudiocraftGenerator:
     """Handles audio generation using Audiocraft's MusicGen and AudioGen models"""
 
     def __init__(self, model_path: str = "facebook/musicgen-small"):
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # Check CUDA availability and set appropriate device
+        self.device = self._setup_device()
         logger.info(f"Using device: {self.device}")
 
-        # Initialize models
+        # Initialize models with appropriate device settings
         try:
             self.music_model = MusicGen.get_pretrained(model_path)
-            self.music_model.set_generation_params(duration=8)  # default duration in seconds
+            self.music_model.to(self.device)
+            self.music_model.set_generation_params(duration=8)
             logger.info("MusicGen model loaded successfully")
         except Exception as e:
             logger.error(f"Error loading MusicGen model: {e}")
             raise
+
+    def _setup_device(self) -> str:
+        """Setup and return the appropriate device with detailed logging"""
+        if torch.cuda.is_available():
+            device = 'cuda'
+            logger.info(f"CUDA available: {torch.cuda.get_device_name(0)}")
+            logger.info(f"CUDA memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+        else:
+            device = 'cpu'
+            logger.info("CUDA not available, using CPU")
+        return device
 
     def generate_music(self,
                        composition_data: Dict,

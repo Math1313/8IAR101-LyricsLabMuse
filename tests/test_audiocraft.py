@@ -1,4 +1,4 @@
-# test_audiocraft.py
+# test/test_audiocraft.py
 from audiocraft.models import MusicGen
 import torch
 

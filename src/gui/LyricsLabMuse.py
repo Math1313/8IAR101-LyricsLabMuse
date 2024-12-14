@@ -1,3 +1,4 @@
+# src/gui/LyricsLabMuse.py
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QVBoxLayout, QPushButton,
@@ -7,11 +8,11 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import sys
 
 # Importation de notre module d'intégration ChatGPT
-from src.core.music_composition_experts import MusicCompositionExperts
-from src.core import rag_helper as RagHelper
-from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
-from audio_generation.audiocraft_generator import FullSongGenerator
-from src.gui.components.ui import AudioControls
+from ..core.music_composition_experts import MusicCompositionExperts
+from ..core import rag_helper as RagHelper
+from ..core.music_composition_export_formatter import MusicCompositionExportFormatter
+from ...audio_generation.audiocraft_generator import FullSongGenerator
+from .components.ui.audio_controls import AudioControls
 
 
 class StreamThread(QThread):
@@ -51,37 +52,41 @@ class ModernInterface(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('LyricsLabMuse')
-        self.setGeometry(100, 100, 800, 700)
+        try:
 
-        # Start the application max size
-        self.showMaximized()
+            self.setWindowTitle('LyricsLabMuse')
+            self.setGeometry(100, 100, 800, 700)
 
-        main_layout = QVBoxLayout()
+            # Start the application max size
+            self.showMaximized()
 
-        # Create a scroll area for the entire content
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            main_layout = QVBoxLayout()
 
-        # Create a frame to hold the content
-        content_frame = QFrame()
-        content_layout = QVBoxLayout(content_frame)
+            # Create a scroll area for the entire content
+            scroll_area = QScrollArea()
+            scroll_area.setWidgetResizable(True)
+            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
-        self.create_title(content_layout)
-        self.create_input_sections(content_layout)
-        self.create_buttons(content_layout)
-        self.create_full_composition_section(content_layout)
+            # Create a frame to hold the content
+            content_frame = QFrame()
+            content_layout = QVBoxLayout(content_frame)
 
-        # Add audio controls here
-        self.setup_audio(content_layout)  # Pass the layout as parameter
+            self.create_title(content_layout)
+            self.create_input_sections(content_layout)
+            self.create_buttons(content_layout)
+            self.create_full_composition_section(content_layout)
 
-        scroll_area.setWidget(content_frame)
-        main_layout.addWidget(scroll_area)
-        self.setLayout(main_layout)
+            # Add audio controls here
+            self.setup_audio(content_layout)  # Pass the layout as parameter
 
-        self.apply_dark_theme()
-        self.initialize_llm()
+            scroll_area.setWidget(content_frame)
+            main_layout.addWidget(scroll_area)
+            self.setLayout(main_layout)
+
+            self.apply_dark_theme()
+            self.initialize_llm()
+        except Exception as e:
+            QMessageBox.critical(self, "UI Initialization Error", f"Failed to initialize UI: {str(e)}")
 
     def create_title(self, layout):
         titre = QLabel('LyricsLabMuse')
@@ -115,56 +120,6 @@ class ModernInterface(QWidget):
         section_layout.addWidget(input_field)
         return section_layout, input_field
 
-    # def create_lyrics_section(self, layout):
-    #     lyrics_label = QLabel('Paroles de Chanson Générées')
-    #     lyrics_label.setStyleSheet("""
-    #         font-weight: bold;
-    #         margin-bottom: 5px;
-    #     """)
-    #
-    #     self.lyrics_field = QTextEdit()
-    #     self.lyrics_field.setReadOnly(True)
-    #     self.lyrics_field.setPlaceholderText('Les paroles de la chanson seront générées ici')
-    #
-    #     lyrics_layout = QVBoxLayout()
-    #     lyrics_layout.addWidget(lyrics_label)
-    #     lyrics_layout.addWidget(self.lyrics_field)
-    #
-    #     layout.addLayout(lyrics_layout)
-
-    # def create_song_structure_section(self, layout):
-    #     structure_label = QLabel('Structure de Chanson Générée')
-    #     structure_label.setStyleSheet("""
-    #         font-weight: bold;
-    #         margin-bottom: 5px;
-    #     """)
-    #
-    #     self.structure_field = QTextEdit()
-    #     self.structure_field.setReadOnly(True)
-    #     self.structure_field.setPlaceholderText('La structure de la chanson sera générée ici')
-    #
-    #     structure_layout = QVBoxLayout()
-    #     structure_layout.addWidget(structure_label)
-    #     structure_layout.addWidget(self.structure_field)
-    #
-    #     layout.addLayout(structure_layout)
-
-    # def create_chord_progression_section(self, layout):
-    #     chords_label = QLabel('Progression d\'Accords Générée')
-    #     chords_label.setStyleSheet("""
-    #         font-weight: bold;
-    #         margin-bottom: 5px;
-    #     """)
-    #
-    #     self.chords_field = QTextEdit()
-    #     self.chords_field.setReadOnly(True)
-    #     self.chords_field.setPlaceholderText('La progression d\'accords sera générée ici')
-    #
-    #     chords_layout = QVBoxLayout()
-    #     chords_layout.addWidget(chords_label)
-    #     chords_layout.addWidget(self.chords_field)
-    #
-    #     layout.addLayout(chords_layout)
 
     def create_full_composition_section(self, layout):
         full_composition_label = QLabel('Composition Complète Générée')
@@ -185,44 +140,8 @@ class ModernInterface(QWidget):
         layout.addLayout(full_composition_layout)
 
     def create_buttons(self, layout):
-        # self.bouton_generer_lyrics = QPushButton('Générer Paroles de Chanson')
-        # self.bouton_generer_lyrics.clicked.connect(self.generer_lyrics)
-        # layout.addWidget(self.bouton_generer_lyrics)
-        #
-        # self.bouton_generer_structure = QPushButton('Générer Structure de Chanson')
-        # self.bouton_generer_structure.clicked.connect(self.generer_song_structure)
-        # layout.addWidget(self.bouton_generer_structure)
-        #
-        # self.bouton_generer_chords = QPushButton('Générer Progression d\'Accords')
-        # self.bouton_generer_chords.clicked.connect(self.generer_chord_progression)
-        # layout.addWidget(self.bouton_generer_chords)
-        #
-        # self.checkbox = QCheckBox('J\'accepte les conditions')
-        # self.checkbox.setStyleSheet("""
-        #     margin-top: 10px;
-        #     margin-bottom: 10px;
-        # """)
-        # layout.addWidget(self.checkbox)
-        #
-        # liste_label = QLabel('Sélectionnez une option')
-        # liste_label.setStyleSheet('font-weight: bold;')
-        # self.liste_deroulante = QComboBox()
-        # self.liste_deroulante.addItems(['Option 1', 'Option 2', 'Option 3'])
-        #
-        # layout.addWidget(liste_label)
-        # layout.addWidget(self.liste_deroulante)
-        #
-        # bouton_layout = QHBoxLayout()
-        # self.bouton_valider = QPushButton('Valider')
-        # self.bouton_valider.clicked.connect(self.valider)
-
         self.bouton_mode = QPushButton('🌙 Mode Sombre')
         self.bouton_mode.clicked.connect(self.toggle_theme)
-
-        # bouton_layout.addWidget(self.bouton_valider)
-        # bouton_layout.addWidget(self.bouton_mode)
-
-        # layout.addLayout(bouton_layout)
 
         # Add full composition button to the existing button creation method
         self.bouton_generer_composition = QPushButton(
@@ -234,8 +153,10 @@ class ModernInterface(QWidget):
     def initialize_llm(self):
         try:
             self.chatgpt_integration = MusicCompositionExperts()
-        except ValueError as e:
-            QMessageBox.warning(self, "Erreur de Configuration", str(e))
+        except Exception as e:
+            QMessageBox.critical(self, "LLM Initialization Error",
+                               f"Failed to initialize language model: {str(e)}")
+            raise
 
     def generer_lyrics(self):
         # Récupérer les informations nécessaires
@@ -502,40 +423,46 @@ class ModernInterface(QWidget):
 
     def generate_audio(self):
         try:
-            # Get composition data from your existing generation
+            # Get current text from fields
+            musical_style = self.text_fields[0].text()
+            song_theme = self.text_fields[1].text()
+            mood = self.text_fields[2].text()
+            language = self.text_fields[3].text()
+
+            if not all([musical_style, song_theme, mood, language]):
+                raise ValueError("All fields must be filled")
+
             composition_data = self.chatgpt_integration.generate_song_composition(
-                self.text_fields[0].text(),  # musical_style
-                self.text_fields[1].text(),  # song_theme
-                self.text_fields[2].text(),  # mood
-                self.text_fields[3].text()  # language
+                musical_style, song_theme, mood, language
             )
 
-            # Format the data using your existing formatter
             formatter = MusicCompositionExportFormatter()
             formatted_data = formatter.generate_audio_export_metadata(
-                # ... your existing parameters ...
+                composition_data.get('lyrics', ''),
+                composition_data.get('chord_progression', ''),
+                composition_data.get('structure', ''),
+                musical_style,
+                mood
             )
 
-            # Generate audio
             result = self.song_generator.generate_full_song(formatted_data)
-
-            # Handle the generated audio (play or save)
             self.handle_audio_output(result["instrumental"])
 
+        except ValueError as e:
+            QMessageBox.warning(self, "Input Error", str(e))
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Audio generation failed: {str(e)}")
+            QMessageBox.critical(self, "Audio Generation Error",
+                               f"Failed to generate audio: {str(e)}")
 
     def handle_audio_output(self, audio_path: str):
-        """Handle the generated audio file"""
         try:
-            self.media_player = QMediaPlayer()
-            self.media_player.setMedia(
-                QMediaContent(QUrl.fromLocalFile(audio_path))
-            )
-            self.media_player.play()
-
+            if self.audio_controls.load_audio(audio_path):
+                self.audio_controls.play_button.click()
+            else:
+                QMessageBox.warning(self, "Error", "Failed to load audio file")
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Audio playback failed: {str(e)}")
+            QMessageBox.critical(self, "Audio Playback Error",
+                               f"Failed to play audio: {str(e)}")
 
     def setup_audio(self, layout):
         """Initialize and setup audio controls"""
