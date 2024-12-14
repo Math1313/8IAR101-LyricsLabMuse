@@ -135,26 +135,16 @@ class AudiocraftGenerator:
         return prompt
 
     def generate_full_song(self, composition_data: Dict[str, Any], progress_callback=None) -> Dict[str, str]:
-        """
-        Generate a complete song with progress updates
-        Args:
-            composition_data: Dictionary containing song metadata and structure
-            progress_callback: Optional callback function to report progress
-        """
         try:
-            # Report initial progress
-            if progress_callback:
-                progress_callback(0, "Initializing generation...")
+            import time
+            start_time = time.time()
+            logger.info("Starting audio generation process...")
 
-            # Extract parameters
+            # Extract parameters and construct prompt
             style = composition_data["music_metadata"]["musical_style"]
             mood = composition_data["music_metadata"]["mood"]
             tempo = composition_data["music_metadata"]["tempo_bpm"]
             key = composition_data["music_metadata"]["primary_key"]
-
-            # Report prompt construction
-            if progress_callback:
-                progress_callback(10, "Constructing generation prompt...")
 
             prompt = self._construct_generation_prompt(
                 style=style,
@@ -164,17 +154,13 @@ class AudiocraftGenerator:
                 composition_data=composition_data
             )
 
-            # Report generation start
-            if progress_callback:
-                progress_callback(20, "Starting audio generation...")
-
-            # Generate the audio
             logger.info(f"Generating audio with prompt: {prompt}")
-            wav = self.music_model.generate([prompt])
 
-            # Report saving progress
-            if progress_callback:
-                progress_callback(80, "Saving generated audio...")
+            # Generate audio
+            generation_start = time.time()
+            wav = self.music_model.generate([prompt])
+            generation_time = time.time() - generation_start
+            logger.info(f"Audio generation took {generation_time:.2f} seconds")
 
             # Save the generated audio
             output_dir = "output/generated"
@@ -182,7 +168,9 @@ class AudiocraftGenerator:
             instrumental_path = os.path.join(output_dir, "instrumental.wav")
             self.save_audio(wav, instrumental_path)
 
-            # Report completion
+            total_time = time.time() - start_time
+            logger.info(f"Total generation process took {total_time:.2f} seconds")
+
             if progress_callback:
                 progress_callback(100, "Audio generation complete!")
 
@@ -195,7 +183,6 @@ class AudiocraftGenerator:
                 progress_callback(-1, f"Error: {str(e)}")
             logger.error(f"Error generating full song: {str(e)}")
             raise
-
     def _calculate_song_duration(self, composition_data: Dict[str, Any]) -> int:
         """
         Calculate song duration based on tempo and structure
