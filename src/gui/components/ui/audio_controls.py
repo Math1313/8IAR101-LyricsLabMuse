@@ -1,9 +1,10 @@
 # src/component/ui/audio_controls.py
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QPushButton,
-                             QSlider, QLabel, QStyle, QWidget)
+                             QSlider, QLabel, QStyle, QWidget, QMessageBox, QFileDialog)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl
+import os
 
 
 class AudioControls(QWidget):
@@ -46,11 +47,19 @@ class AudioControls(QWidget):
         # Time labels
         self.time_label = QLabel("0:00 / 0:00")
 
+        # Create save button using system icon
+        self.save_button = QPushButton()
+        self.save_button.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.save_button.clicked.connect(self.save_audio)
+
+
         # Add widgets to controls layout
         controls_layout.addWidget(self.play_button)
         controls_layout.addWidget(self.stop_button)
         controls_layout.addWidget(self.mute_button)
         controls_layout.addWidget(self.volume_slider)
+        # Add save button to controls layout
+        controls_layout.addWidget(self.save_button)
 
         # Add layouts to main layout
         main_layout.addLayout(controls_layout)
@@ -145,6 +154,7 @@ class AudioControls(QWidget):
     def load_audio(self, audio_path: str):
         """Load and prepare audio file for playback"""
         try:
+            self.current_audio_path = audio_path
             self.player.setMedia(
                 QMediaContent(QUrl.fromLocalFile(audio_path))
             )
@@ -152,3 +162,26 @@ class AudioControls(QWidget):
         except Exception as e:
             print(f"Error loading audio: {e}")
             return False
+
+    def save_audio(self):
+        """Save current audio to user-selected location"""
+        try:
+            if not hasattr(self, 'current_audio_path'):
+                QMessageBox.warning(self, "Error", "No audio loaded to save")
+                return
+
+            file_name = QFileDialog.getSaveFileName(
+                self,
+                "Save Audio File",
+                os.path.expanduser("~/Music"),  # Default to Music directory
+                "Audio Files (*.wav);;All Files (*)"
+            )[0]
+
+            if file_name:
+                # Copy the file to new location
+                import shutil
+                shutil.copy2(self.current_audio_path, file_name)
+                QMessageBox.information(self, "Success", "Audio saved successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save audio: {str(e)}")
