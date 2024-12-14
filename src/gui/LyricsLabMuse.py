@@ -8,11 +8,11 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import sys
 
 # Importation de notre module d'intégration ChatGPT
-from ..core.music_composition_experts import MusicCompositionExperts
-from ..core import rag_helper as RagHelper
-from ..core.music_composition_export_formatter import MusicCompositionExportFormatter
-from ...audio_generation.audiocraft_generator import FullSongGenerator
-from .components.ui.audio_controls import AudioControls
+from src.core.music_composition_experts import MusicCompositionExperts
+from src.core import rag_helper as RagHelper
+from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
+from audio_generation.audiocraft_generator import FullSongGenerator
+from src.gui.components.ui.audio_controls import AudioControls
 
 
 class StreamThread(QThread):

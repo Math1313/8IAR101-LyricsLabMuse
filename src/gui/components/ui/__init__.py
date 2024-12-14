@@ -1,5 +1,5 @@
 # src/component/ui/__init__.py
-from .audio_controls import AudioControls
+from src.gui.components.ui.audio_controls import AudioControls
 
 # ui/components.py (optional, for other UI components)
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
