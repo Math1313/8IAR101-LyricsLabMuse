@@ -1,17 +1,17 @@
 # src/gui/LyricsLabMuse.py
+import os
+import sys
+import logging
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QVBoxLayout, QPushButton,
                              QFrame, QMessageBox, QTextEdit, QScrollArea)
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 
-import sys
-
-# Importation de notre module d'intégration ChatGPT
 from src.core.music_composition_experts import MusicCompositionExperts
-from src.core import rag_helper as RagHelper
+from src.core.rag_helper import MusicStructureRAG
 from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
-from audio_generation.audiocraft_generator import FullSongGenerator
+from audio_generation.audiocraft_generator import AudiocraftGenerator
 from src.gui.components.ui.audio_controls import AudioControls
 
 
@@ -44,12 +44,20 @@ class StreamThread(QThread):
 class ModernInterface(QWidget):
     def __init__(self):
         super().__init__()
-        self.song_generator = FullSongGenerator()
-        self.media_player = QMediaPlayer()
+        try:
+            self.song_generator = AudiocraftGenerator()
+        except Exception as e:
+            QMessageBox.critical(self, "Initialization Error",
+                                 f"Failed to initialize audio generator: {str(e)}")
+            return
+        self.rag = MusicStructureRAG()
         self.dark_mode = False
         self.streaming_thread = None
         self.audio_controls = None
         self.initUI()
+
+        # TODO test
+        # self.media_player = QMediaPlayer()
 
     def initUI(self):
         try:
@@ -120,7 +128,6 @@ class ModernInterface(QWidget):
         section_layout.addWidget(input_field)
         return section_layout, input_field
 
-
     def create_full_composition_section(self, layout):
         full_composition_label = QLabel('Composition Complète Générée')
         full_composition_label.setStyleSheet("""
@@ -143,19 +150,23 @@ class ModernInterface(QWidget):
         self.bouton_mode = QPushButton('🌙 Mode Sombre')
         self.bouton_mode.clicked.connect(self.toggle_theme)
 
-        # Add full composition button to the existing button creation method
-        self.bouton_generer_composition = QPushButton(
-            'Générer Composition Complète')
-        self.bouton_generer_composition.clicked.connect(
-            self.generer_full_composition)
+        self.bouton_generer_composition = QPushButton('Générer Composition Complète')
+        self.bouton_generer_composition.clicked.connect(self.generer_full_composition)
+
+        # Add audio generation button
+        self.bouton_generer_audio = QPushButton('Générer Audio')
+        self.bouton_generer_audio.clicked.connect(self.generate_audio)
+
+        layout.addWidget(self.bouton_mode)
         layout.addWidget(self.bouton_generer_composition)
+        layout.addWidget(self.bouton_generer_audio)
 
     def initialize_llm(self):
         try:
             self.chatgpt_integration = MusicCompositionExperts()
         except Exception as e:
             QMessageBox.critical(self, "LLM Initialization Error",
-                               f"Failed to initialize language model: {str(e)}")
+                                 f"Failed to initialize language model: {str(e)}")
             raise
 
     def generer_lyrics(self):
@@ -186,35 +197,50 @@ class ModernInterface(QWidget):
         self.streaming_thread.start()
 
     def generer_song_structure(self):
-        # Récupérer les informations nécessaires
+        """Generate song structure using the improved RAG"""
+        # Get necessary information
         musicalStyle = self.text_fields[0].text()
         songTheme = self.text_fields[1].text()
         mood = self.text_fields[2].text()
         language = self.text_fields[3].text()
-        structure = RagHelper.query_rag(
-            self.chatgpt_integration.llm, musicalStyle
-        )
 
-        # Vérifier que les champs ne sont pas vides
-        if not musicalStyle or not songTheme or not mood or not language:
+        # Validate inputs
+        if not all([musicalStyle, songTheme, mood, language]):
             QMessageBox.warning(
-                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
+                self, "Error", "Please fill in all required fields")
             return
 
-        # Réinitialiser le champ de structure
-        self.structure_field.clear()
+        # Get structure using new RAG
+        try:
+            structure = self.rag.query_rag(musicalStyle)
 
-        # Arrêter tout thread de streaming précédent
-        if self.streaming_thread and self.streaming_thread.isRunning():
-            self.streaming_thread.terminate()
+            # Reset the structure field
+            self.structure_field.clear()
 
-        # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread(
-            'generate_song_structure', musicalStyle, structure, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(
-            self.update_structure_streaming)
-        self.streaming_thread.stream_complete.connect(self.on_stream_complete)
-        self.streaming_thread.start()
+            # Stop any existing streaming thread
+            if self.streaming_thread and self.streaming_thread.isRunning():
+                self.streaming_thread.terminate()
+
+            # Create and start new streaming thread
+            self.streaming_thread = StreamThread(
+                'generate_song_structure',
+                musicalStyle,
+                structure,  # Pass the RAG-generated structure
+                songTheme,
+                mood,
+                language
+            )
+            self.streaming_thread.chunk_ready.connect(
+                self.update_structure_streaming)
+            self.streaming_thread.stream_complete.connect(self.on_stream_complete)
+            self.streaming_thread.start()
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Structure Generation Error",
+                f"Failed to generate song structure: {str(e)}"
+            )
 
     def generer_chord_progression(self):
         # Récupérer les informations nécessaires
@@ -244,35 +270,51 @@ class ModernInterface(QWidget):
         self.streaming_thread.start()
 
     def generer_full_composition(self):
-        # Récupérer les informations nécessaires
+        """Generate full composition with improved RAG integration"""
+        # Get necessary information
         musicalStyle = self.text_fields[0].text()
         songTheme = self.text_fields[1].text()
         mood = self.text_fields[2].text()
         language = self.text_fields[3].text()
-        structure = RagHelper.query_rag(
-            self.chatgpt_integration.llm, musicalStyle
-        )
 
-        # Vérifier que les champs ne sont pas vides
-        if not musicalStyle or not songTheme or not mood or not language:
+        # Validate inputs
+        if not all([musicalStyle, songTheme, mood, language]):
             QMessageBox.warning(
-                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
+                self, "Error", "Please fill in all required fields")
             return
 
-        # Réinitialiser le champ de composition complète
-        self.full_composition_field.clear()
+        try:
+            # Get structure using new RAG
+            structure = self.rag.query_rag(musicalStyle)
 
-        # Arrêter tout thread de streaming précédent
-        if self.streaming_thread and self.streaming_thread.isRunning():
-            self.streaming_thread.terminate()
+            # Reset the composition field
+            self.full_composition_field.clear()
 
-        # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread(
-            'generate_song_composition', musicalStyle, structure, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(
-            self.update_full_composition_streaming)
-        self.streaming_thread.stream_complete.connect(self.on_stream_complete)
-        self.streaming_thread.start()
+            # Stop any existing streaming thread
+            if self.streaming_thread and self.streaming_thread.isRunning():
+                self.streaming_thread.terminate()
+
+            # Create and start new streaming thread
+            self.streaming_thread = StreamThread(
+                'generate_song_composition',
+                musicalStyle,
+                structure,  # Pass the RAG-generated structure
+                songTheme,
+                mood,
+                language
+            )
+            self.streaming_thread.chunk_ready.connect(
+                self.update_full_composition_streaming)
+            self.streaming_thread.stream_complete.connect(
+                self.on_stream_complete)
+            self.streaming_thread.start()
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Composition Generation Error",
+                f"Failed to generate composition: {str(e)}"
+            )
 
     def update_full_composition_streaming(self, chunk):
         # Ajouter le nouveau morceau au texte existant
@@ -422,8 +464,9 @@ class ModernInterface(QWidget):
             msg.exec_()
 
     def generate_audio(self):
+        """Generate audio with complete musical data"""
         try:
-            # Get current text from fields
+            # Get input fields
             musical_style = self.text_fields[0].text()
             song_theme = self.text_fields[1].text()
             mood = self.text_fields[2].text()
@@ -432,52 +475,175 @@ class ModernInterface(QWidget):
             if not all([musical_style, song_theme, mood, language]):
                 raise ValueError("All fields must be filled")
 
-            composition_data = self.chatgpt_integration.generate_song_composition(
-                musical_style, song_theme, mood, language
+            # Show status
+            QMessageBox.information(
+                self,
+                "Generation Status",
+                "Starting audio generation. This may take a few minutes..."
             )
 
+            # Get composition text
+            composition_text = self.full_composition_field.toPlainText()
+            if not composition_text:
+                QMessageBox.warning(self, "Error", "Please generate composition first")
+                return
+
+            # Parse all composition data
+            parsed_data = self._parse_composition_data(composition_text)
+
+            # Extract musical parameters
+            tempo = None
+            key = None
+            for param, value in parsed_data['musical_parameters'].items():
+                if 'Tempo' in param:
+                    # Extract numeric value from tempo string (e.g., "120 BPM" -> 120)
+                    tempo = int(''.join(filter(str.isdigit, value)))
+                if 'Key' in param:
+                    key = value
+
+            # Format data for audio generation
             formatter = MusicCompositionExportFormatter()
             formatted_data = formatter.generate_audio_export_metadata(
-                composition_data.get('lyrics', ''),
-                composition_data.get('chord_progression', ''),
-                composition_data.get('structure', ''),
-                musical_style,
-                mood
+                lyrics=parsed_data['lyrics'],
+                chord_progression=parsed_data['chord_progression'],
+                song_structure=parsed_data['full_structure'],
+                musical_style=musical_style,
+                mood=mood
             )
 
+            # Enhance the formatted data with specific musical parameters
+            if 'music_metadata' not in formatted_data:
+                formatted_data['music_metadata'] = {}
+
+            formatted_data['music_metadata'].update({
+                'tempo_bpm': tempo or 120,  # Default to 120 if not found
+                'primary_key': key or 'C',  # Default to C if not found
+            })
+
+            # Add melody information if available
+            if parsed_data['melody']:
+                formatted_data['melody_data'] = parsed_data['melody']
+
+            # Generate the audio
             result = self.song_generator.generate_full_song(formatted_data)
+
+            if not result or "instrumental" not in result:
+                raise ValueError("Audio generation failed to produce output")
+
+            # Handle the generated audio
             self.handle_audio_output(result["instrumental"])
+
+            QMessageBox.information(
+                self,
+                "Generation Complete",
+                "Audio generation completed successfully!"
+            )
 
         except ValueError as e:
             QMessageBox.warning(self, "Input Error", str(e))
         except Exception as e:
-            QMessageBox.critical(self, "Audio Generation Error",
-                               f"Failed to generate audio: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Audio Generation Error",
+                f"Failed to generate audio: {str(e)}"
+            )
+            logging.error(f"Audio generation error: {str(e)}")
+    def _extract_lyrics(self, composition_text):
+        """Extract lyrics from composition text"""
+        # Add logic to extract lyrics section from composition text
+        if "## LYRICS" in composition_text:
+            lyrics_section = composition_text.split("## LYRICS")[1].split("##")[0]
+            return lyrics_section.strip()
+        return ""
 
-    def handle_audio_output(self, audio_path: str):
-        try:
-            if self.audio_controls.load_audio(audio_path):
-                self.audio_controls.play_button.click()
-            else:
-                QMessageBox.warning(self, "Error", "Failed to load audio file")
-        except Exception as e:
-            QMessageBox.critical(self, "Audio Playback Error",
-                               f"Failed to play audio: {str(e)}")
+    def _extract_chords(self, composition_text):
+        """Extract chord progression from composition text"""
+        # Add logic to extract chord section from composition text
+        if "## CHORD PROGRESSION" in composition_text:
+            chord_section = composition_text.split("## CHORD PROGRESSION")[1].split("##")[0]
+            return chord_section.strip()
+        return ""
 
-    def setup_audio(self, layout):
-        """Initialize and setup audio controls"""
-        self.audio_controls = AudioControls(self)
-        layout.addWidget(self.audio_controls)
+    def _extract_lyrics(self, composition_text):
+        """Extract lyrics from composition text"""
+        # Add logic to extract lyrics section from composition text
+        if "## LYRICS" in composition_text:
+            lyrics_section = composition_text.split("## LYRICS")[1].split("##")[0]
+            return lyrics_section.strip()
+        return ""
 
+    def _extract_chords(self, composition_text):
+        """Extract chord progression from composition text"""
+        # Add logic to extract chord section from composition text
+        if "## CHORD PROGRESSION" in composition_text:
+            chord_section = composition_text.split("## CHORD PROGRESSION")[1].split("##")[0]
+            return chord_section.strip()
+        return ""
     def handle_audio_output(self, audio_path: str):
         """Handle the generated audio file"""
         try:
+            if not os.path.exists(audio_path):
+                raise FileNotFoundError(f"Generated audio file not found at {audio_path}")
+
             if self.audio_controls.load_audio(audio_path):
                 self.audio_controls.play_button.click()  # Start playing
             else:
                 QMessageBox.warning(self, "Error", "Failed to load audio file")
+
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Audio playback failed: {str(e)}")
+            logging.error(f"Audio playback error: {str(e)}")
+
+    def setup_audio(self, layout):
+        """Initialize and setup audio controls"""
+        try:
+            self.audio_controls = AudioControls(self)
+            layout.addWidget(self.audio_controls)
+        except Exception as e:
+            QMessageBox.critical(self, "Audio Setup Error",
+                                 f"Failed to initialize audio controls: {str(e)}")
+            logging.error(f"Audio controls setup error: {str(e)}")
+
+    def _parse_composition_data(self, composition_text: str) -> dict:
+        """
+        Parse the full composition text to extract all musical elements
+        """
+        sections = {}
+        current_section = None
+        current_content = []
+
+        # Split by sections
+        for line in composition_text.split('\n'):
+            if line.startswith('##'):
+                # Save previous section
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content)
+                    current_content = []
+                # Start new section
+                current_section = line.replace('#', '').strip()
+            elif current_section:
+                current_content.append(line)
+
+        # Add final section
+        if current_section and current_content:
+            sections[current_section] = '\n'.join(current_content)
+
+        # Extract specific parameters
+        musical_params = {}
+        if "MUSICAL PARAMETERS" in sections:
+            params_text = sections["MUSICAL PARAMETERS"]
+            for line in params_text.split('\n'):
+                if ":" in line:
+                    key, value = line.split(':', 1)
+                    musical_params[key.strip()] = value.strip()
+
+        return {
+            'musical_parameters': musical_params,
+            'lyrics': sections.get("LYRICS", ""),
+            'chord_progression': sections.get("CHORD PROGRESSION", ""),
+            'melody': sections.get("MELODY", ""),
+            'full_structure': sections.get("COMPLETE SONG STRUCTURE", "")
+        }
 
 
 if __name__ == '__main__':

@@ -1,83 +1,123 @@
 import os
-# from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from typing import Dict, List, Tuple
 
-# load_dotenv()
-
+# Maintain original paths
 CHROMA_PATH = "../../chroma/"
 DATA_PATH = "../../ragData/"
-# TODO test + modif cette partie semble problématique
-PROMPT_TEMPLATE = """
-Give answer based only on the following context: {context}
-What is the {music_style} Music Typical Structure?
-I want to know the number of verse, chorus, and bridge in a typical {music_style} music.
-Do a list that looks like this:
-Intro - Verse - Chorus - Verse - etc...
-I just want the list.
-"""
-
-llm = ChatOpenAI(
-    temperature=0.3,  # Slightly higher for creative variation
-    base_url=os.getenv('MODEL_URL'),
-    api_key="not-needed",
-    streaming=True
-)
-embedding_function = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
-def query_rag(llm, query_text):
-    """
-    Query a Retrieval-Augmented Generation (RAG) system using Chroma database and OpenAI.
-    Args:
-      - query_text (str): The text to query the RAG system with.
-    Returns:
-      - formatted_response (str): Formatted response including the generated text and sources.
-      - response_text (str): The generated response text.
+class MusicStructureRAG:
+    """Enhanced RAG system for music structure generation"""
+
+    PROMPT_TEMPLATE = """
+    Based on the following reference information about music structure: {context}
+
+    Create a structured sequence for {music_style} music.
+    Only provide the sections in order, like this example format:
+    Intro → Verse → Chorus → Verse → etc.
+
+    Important:
+    - Keep it simple and clear
+    - Only show the sequence
+    - No additional explanations
+    - No section lengths or bars
     """
 
-    augmented_query = query_text + " Music Typical Structure Intro Outro"
-    print(query_text)
+    def __init__(self):
+        """Initialize the RAG system"""
+        self.embedding_function = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        )
+        self.llm = ChatOpenAI(
+            temperature=0.3,
+            base_url=os.getenv('MODEL_URL'),
+            api_key="not-needed",
+            streaming=True
+        )
 
-    # Prepare the database
-    db = Chroma(persist_directory=CHROMA_PATH,
-                embedding_function=embedding_function)
+    def _augment_query(self, music_style: str) -> str:
+        """Create an enhanced query for better context retrieval"""
+        return f"{music_style} music structure typical standard form"
 
-    # Retrieving the context from the DB using similarity search
-    results = db.similarity_search_with_relevance_scores(augmented_query, k=3)
-    print("Generating structured list...")
+    def _retrieve_context(self, query: str) -> List[Tuple[str, float]]:
+        """Retrieve relevant context"""
+        db = Chroma(
+            persist_directory=CHROMA_PATH,
+            embedding_function=self.embedding_function
+        )
 
-    # Check if there are any matching results or if the relevance score is too low
-    if len(results) == 0 or results[0][1] < 0.55:
-        print("Unable to find matching results.")
+        results = db.similarity_search_with_relevance_scores(query, k=3)
 
-    # Combine context from matching documents
-    context_text = "\n\n - -\n\n".join(
-        [doc.page_content for doc, _score in results])
+        # Filter results with relevance threshold
+        relevant_results = [
+            (doc.page_content, score)
+            for doc, score in results
+            if score >= 0.55  # Keep original threshold
+        ]
 
-    # Create prompt template using context and query text
-    prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
-    prompt = prompt_template.format(
-        context=context_text, music_style=query_text)
+        return relevant_results
 
-    # Generate response text based on the prompt
-    response_text = llm.invoke(prompt).content
+    def query_rag(self, music_style: str) -> str:
+        """Main method to query the RAG system"""
+        try:
+            print(music_style)  # Keep original debug print
 
-    # Get sources of the matching documents
-    # sources = [doc.metadata.get("source", None) for doc, _score in results]
+            # Create query and get context
+            augmented_query = self._augment_query(music_style)
+            results = self._retrieve_context(augmented_query)
 
-    # Format and return response including generated text and sources
-    # formatted_response = f"Response: {response_text}\nSources: {sources}"
-    # return formatted_response, response_text
-    print(response_text)
-    return response_text
+            if not results:
+                print("Unable to find matching results.")
+                return f"Standard {music_style} structure not found"
+
+            # Combine context from matching documents
+            context_text = "\n\n---\n\n".join(
+                [doc for doc, _score in results]
+            )
+
+            print("Generating structured list...")  # Keep original debug print
+
+            # Create and execute prompt
+            prompt_template = ChatPromptTemplate.from_template(self.PROMPT_TEMPLATE)
+            prompt = prompt_template.format(
+                context=context_text,
+                music_style=music_style
+            )
+
+            # Generate and clean response
+            response = self.llm.invoke(prompt).content
+            cleaned_response = self._clean_response(response)
+
+            print(cleaned_response)  # Keep original debug print
+            return cleaned_response
+
+        except Exception as e:
+            print(f"Error in RAG query: {str(e)}")
+            return f"Error generating {music_style} structure"
+
+    def _clean_response(self, response: str) -> str:
+        """Clean and standardize the response"""
+        # Take first line if multiple lines
+        if '\n' in response:
+            response = response.split('\n')[0]
+
+        # Clean up the response
+        response = response.strip()
+        response = response.replace(' - ', ' → ')
+        response = response.replace('--', '→')
+        response = response.replace('-', '→')
+
+        return response
 
 
 def main():
-    query_rag(llm, "Rhythm and Blues")
+    """Main function for testing"""
+    rag = MusicStructureRAG()
+    rag.query_rag("Rhythm and Blues")
 
 
 if __name__ == "__main__":
