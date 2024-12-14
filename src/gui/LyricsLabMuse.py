@@ -5,8 +5,10 @@ import logging
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QVBoxLayout, QPushButton,
-                             QFrame, QMessageBox, QTextEdit, QScrollArea)
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+                             QFrame, QMessageBox, QTextEdit,
+                             QScrollArea, QProgressDialog
+                             )
+# from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 
 from src.core.music_composition_experts import MusicCompositionExperts
 from src.core.rag_helper import MusicStructureRAG
@@ -39,6 +41,36 @@ class StreamThread(QThread):
         except Exception as e:
             self.chunk_ready.emit(f"Erreur : {str(e)}")
             self.stream_complete.emit()
+
+
+class AudioGenerationThread(QThread):
+    """Thread for handling audio generation"""
+    progress_updated = pyqtSignal(int, str)  # For progress updates
+    generation_complete = pyqtSignal(dict)  # For successful completion
+    generation_error = pyqtSignal(str)  # For error handling
+
+    def __init__(self, song_generator, formatted_data):
+        super().__init__()
+        self.song_generator = song_generator
+        self.formatted_data = formatted_data
+
+    def run(self):
+        try:
+            # Define progress callback
+            def update_progress(percent, message):
+                self.progress_updated.emit(percent, message)
+
+            # Generate audio
+            result = self.song_generator.generate_full_song(
+                self.formatted_data,
+                progress_callback=update_progress
+            )
+
+            # Emit result
+            self.generation_complete.emit(result)
+
+        except Exception as e:
+            self.generation_error.emit(str(e))
 
 
 class ModernInterface(QWidget):
@@ -464,9 +496,9 @@ class ModernInterface(QWidget):
             msg.exec_()
 
     def generate_audio(self):
-        """Generate audio with complete musical data"""
+        """Generate audio in a separate thread"""
         try:
-            # Get input fields
+            # Get input fields and validate
             musical_style = self.text_fields[0].text()
             song_theme = self.text_fields[1].text()
             mood = self.text_fields[2].text()
@@ -475,33 +507,21 @@ class ModernInterface(QWidget):
             if not all([musical_style, song_theme, mood, language]):
                 raise ValueError("All fields must be filled")
 
-            # Show status
-            QMessageBox.information(
-                self,
-                "Generation Status",
-                "Starting audio generation. This may take a few minutes..."
-            )
+            # Create progress dialog
+            self.progress = QProgressDialog("Preparing audio generation...", "Cancel", 0, 100, self)
+            self.progress.setWindowTitle("Generating Audio")
+            self.progress.setWindowModality(Qt.WindowModal)
+            self.progress.setAutoClose(True)
+            self.progress.setAutoReset(True)
 
-            # Get composition text
+            # Get and validate composition data
             composition_text = self.full_composition_field.toPlainText()
             if not composition_text:
                 QMessageBox.warning(self, "Error", "Please generate composition first")
                 return
 
-            # Parse all composition data
+            # Parse and format data
             parsed_data = self._parse_composition_data(composition_text)
-
-            # Extract musical parameters
-            tempo = None
-            key = None
-            for param, value in parsed_data['musical_parameters'].items():
-                if 'Tempo' in param:
-                    # Extract numeric value from tempo string (e.g., "120 BPM" -> 120)
-                    tempo = int(''.join(filter(str.isdigit, value)))
-                if 'Key' in param:
-                    key = value
-
-            # Format data for audio generation
             formatter = MusicCompositionExportFormatter()
             formatted_data = formatter.generate_audio_export_metadata(
                 lyrics=parsed_data['lyrics'],
@@ -511,43 +531,52 @@ class ModernInterface(QWidget):
                 mood=mood
             )
 
-            # Enhance the formatted data with specific musical parameters
+            # Update musical parameters
             if 'music_metadata' not in formatted_data:
                 formatted_data['music_metadata'] = {}
-
             formatted_data['music_metadata'].update({
-                'tempo_bpm': tempo or 120,  # Default to 120 if not found
-                'primary_key': key or 'C',  # Default to C if not found
+                'tempo_bpm': parsed_data.get('musical_parameters', {}).get('Tempo', '120').split()[0],
+                'primary_key': parsed_data.get('musical_parameters', {}).get('Key', 'C'),
             })
 
-            # Add melody information if available
-            if parsed_data['melody']:
-                formatted_data['melody_data'] = parsed_data['melody']
+            # Create and configure audio generation thread
+            self.audio_thread = AudioGenerationThread(self.song_generator, formatted_data)
 
-            # Generate the audio
-            result = self.song_generator.generate_full_song(formatted_data)
+            # Connect signals
+            self.audio_thread.progress_updated.connect(self.update_generation_progress)
+            self.audio_thread.generation_complete.connect(self.handle_generation_complete)
+            self.audio_thread.generation_error.connect(self.handle_generation_error)
 
-            if not result or "instrumental" not in result:
-                raise ValueError("Audio generation failed to produce output")
+            # Connect cancel button
+            self.progress.canceled.connect(self.audio_thread.terminate)
 
-            # Handle the generated audio
-            self.handle_audio_output(result["instrumental"])
-
-            QMessageBox.information(
-                self,
-                "Generation Complete",
-                "Audio generation completed successfully!"
-            )
+            # Start generation
+            self.audio_thread.start()
 
         except ValueError as e:
             QMessageBox.warning(self, "Input Error", str(e))
         except Exception as e:
-            QMessageBox.critical(
-                self,
-                "Audio Generation Error",
-                f"Failed to generate audio: {str(e)}"
-            )
+            QMessageBox.critical(self, "Audio Generation Error", f"Failed to generate audio: {str(e)}")
             logging.error(f"Audio generation error: {str(e)}")
+
+    def update_generation_progress(self, percent, message):
+        """Update progress dialog"""
+        if self.progress is not None:
+            self.progress.setLabelText(message)
+            self.progress.setValue(percent)
+
+    def handle_generation_complete(self, result):
+        """Handle successful generation"""
+        if "instrumental" in result:
+            self.handle_audio_output(result["instrumental"])
+            QMessageBox.information(self, "Generation Complete", "Audio generation completed successfully!")
+        else:
+            QMessageBox.warning(self, "Generation Error", "No audio was generated")
+
+    def handle_generation_error(self, error_message):
+        """Handle generation error"""
+        QMessageBox.critical(self, "Generation Error", f"Failed to generate audio: {error_message}")
+
     def _extract_lyrics(self, composition_text):
         """Extract lyrics from composition text"""
         # Add logic to extract lyrics section from composition text
@@ -579,6 +608,7 @@ class ModernInterface(QWidget):
             chord_section = composition_text.split("## CHORD PROGRESSION")[1].split("##")[0]
             return chord_section.strip()
         return ""
+
     def handle_audio_output(self, audio_path: str):
         """Handle the generated audio file"""
         try:

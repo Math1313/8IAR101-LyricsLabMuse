@@ -134,18 +134,28 @@ class AudiocraftGenerator:
 
         return prompt
 
-    def generate_full_song(self, composition_data: Dict[str, Any]) -> Dict[str, str]:
+    def generate_full_song(self, composition_data: Dict[str, Any], progress_callback=None) -> Dict[str, str]:
         """
-        Generate a complete song using all available musical data
+        Generate a complete song with progress updates
+        Args:
+            composition_data: Dictionary containing song metadata and structure
+            progress_callback: Optional callback function to report progress
         """
         try:
-            # Extract core musical parameters
+            # Report initial progress
+            if progress_callback:
+                progress_callback(0, "Initializing generation...")
+
+            # Extract parameters
             style = composition_data["music_metadata"]["musical_style"]
             mood = composition_data["music_metadata"]["mood"]
             tempo = composition_data["music_metadata"]["tempo_bpm"]
             key = composition_data["music_metadata"]["primary_key"]
 
-            # Construct detailed prompt
+            # Report prompt construction
+            if progress_callback:
+                progress_callback(10, "Constructing generation prompt...")
+
             prompt = self._construct_generation_prompt(
                 style=style,
                 mood=mood,
@@ -154,27 +164,35 @@ class AudiocraftGenerator:
                 composition_data=composition_data
             )
 
-            # Set generation parameters based on composition data
-            self.set_generation_params(
-                duration=self._calculate_song_duration(composition_data)
-            )
+            # Report generation start
+            if progress_callback:
+                progress_callback(20, "Starting audio generation...")
 
             # Generate the audio
             logger.info(f"Generating audio with prompt: {prompt}")
             wav = self.music_model.generate([prompt])
 
+            # Report saving progress
+            if progress_callback:
+                progress_callback(80, "Saving generated audio...")
+
             # Save the generated audio
             output_dir = "output/generated"
             os.makedirs(output_dir, exist_ok=True)
-
             instrumental_path = os.path.join(output_dir, "instrumental.wav")
             self.save_audio(wav, instrumental_path)
+
+            # Report completion
+            if progress_callback:
+                progress_callback(100, "Audio generation complete!")
 
             return {
                 "instrumental": instrumental_path
             }
 
         except Exception as e:
+            if progress_callback:
+                progress_callback(-1, f"Error: {str(e)}")
             logger.error(f"Error generating full song: {str(e)}")
             raise
 
