@@ -46,7 +46,7 @@ MODEL_URL=http://localhost:1234/v1
 ``` bash
 py src/core/create_rag_data.py
 ```
-# *********Pour Audiocraft ===>> EXPLOSION de l'environnement:D
+<!-- # *********Pour Audiocraft ===>> EXPLOSION de l'environnement:D
 ### pip fresh start
 pip freeze > installed_packages.txt
 pip uninstall -r installed_packages.txt -y
@@ -58,7 +58,7 @@ py -3.9 -m venv .venv_audiocraft
 ### install dependencies
 pip install wheel setuptools numpy==1.24.3
 pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cpu
-pip install audiocraft
+pip install audiocraft -->
 
 
 
