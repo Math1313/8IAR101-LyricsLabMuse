@@ -59,9 +59,34 @@ py -3.9 -m venv .venv_audiocraft
 pip install wheel setuptools numpy==1.24.3
 pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cpu
 pip install audiocraft -->
-
-
-
+## Project Structure
+8IAR101-LyricsLabMuse/
+├── .env
+├── .venv
+├── docs/
+├── ragData/
+│   └── commonMusicGenreStructure.pdf
+├── src/
+│   ├── core/
+│   │   ├── audiocraft_generator.py
+│   │   ├── create_rag_data.py
+│   │   ├── music_composition_experts.py
+│   │   ├── music_composition_export_formatter.py
+│   │   └── rag_helper.py
+│   ├── gui/
+│   │   ├── components/
+│   │   │   └── ui/
+│   │   │       ├── __init__.py
+│   │   │       └── audio_controls.py
+│   │   ├── __init__.py
+│   │   └── LyricsLabMuse.py
+│   ├── services/
+│   └── utils/
+├── .env
+├── .gitignore
+├── project_structure.md
+├── README.md
+└── requirements.txt
 
 [//]: # (TODO)
 ## TODO

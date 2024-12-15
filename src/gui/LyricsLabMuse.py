@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../")))
 
 from src.gui.components.ui.audio_controls import AudioControls
-from src.audio_generation.audiocraft_generator import AudiocraftGenerator
+from src.core.audiocraft_generator import AudiocraftGenerator
 from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
 from src.core.rag_helper import MusicStructureRAG
 from src.core.music_composition_experts import MusicCompositionExperts
