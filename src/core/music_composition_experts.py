@@ -18,24 +18,42 @@ class MusicCompositionExperts:
         )
 
     MUSICAL_PARAMETERS_TEMPLATE = """
-        You are a music producer. Define the technical parameters for a {musical_style} song with a {mood} mood.
+    You are a music producer creating a {musical_style} song with a {mood} mood.
 
-        Provide ONLY these parameters in this exact format:
+    First, generate a creative title that reflects the style, mood, and theme provided.
+    The title should be catchy and memorable.
 
-        [Musical Parameters]
-        Structure: {structure}
-        Tempo: (specific BPM, e.g., "120 BPM")
-        Key: (specific key, e.g., "C major" or "A minor")
-        Time Signature: (e.g., "4/4" or "3/4")
-        Genre-Specific Feel: (e.g., "Shuffle", "Straight", "Swing")
-        Dynamic Level: (e.g., "Medium-loud", "Soft", "Building")
-        Suggested Sound: (e.g., "Warm analog", "Modern digital", "Raw acoustic")
+    Then, define the technical parameters in this exact structured format:
 
-        [Production Notes]
-        Main Instruments: (list 3-4 key instruments)
-        Effects: (list 2-3 key effects)
-        Mix Focus: (e.g., "Bass-heavy", "Vocal-forward", "Balanced")
-        """
+    [Title]
+    <Generate a single line with the song title>
+
+    [Musical Parameters]
+    Tempo: <specific BPM value between 60-180>
+    Key: <specific key, e.g., "C major" or "A minor">
+    Time Signature: <specific time signature, e.g., "4/4" or "3/4">
+    Genre-Specific Feel: <specific feel, e.g., "Shuffle", "Straight", "Swing">
+    Dynamic Level: <specific level, e.g., "Medium-loud", "Soft", "Building">
+
+    [Production Elements]
+    Main Instruments:
+    - <instrument 1>
+    - <instrument 2>
+    - <instrument 3>
+    (List 3-4 key instruments typical for {musical_style})
+
+    Effects:
+    - <effect 1>
+    - <effect 2>
+    (List 2-3 key effects appropriate for {musical_style})
+
+    [Mix Notes]
+    Mix Focus: <specific mix focus, e.g., "Bass-heavy", "Vocal-forward", "Balanced">
+    Stereo Space: <specific stereo approach, e.g., "Wide", "Centered", "Dynamic">
+    EQ Focus: <specific frequency focus, e.g., "Rich low-end", "Bright highs", "Mid-focused">
+
+    Provide ONLY these parameters exactly as requested, with no additional explanations or variations.
+    """
 
     LYRICS_EXPERT_TEMPLATE = """
         You are a professional lyricist. Create structured lyrics based on:

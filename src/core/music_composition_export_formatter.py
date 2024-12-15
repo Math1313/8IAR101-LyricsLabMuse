@@ -250,26 +250,110 @@ class MusicCompositionExportFormatter:
     def format_composition_for_export(self, composition_text: str) -> Dict[str, Any]:
         """Format the full composition text into a structured dictionary"""
         try:
+            # Parse composition sections
             sections = self._parse_composition_sections(composition_text)
+
+            # Extract title from Musical Parameters section
+            title = self._extract_title(sections.get("MUSICAL PARAMETERS", ""))
+
+            # Parse musical parameters into structured format
+            musical_params = self._parse_musical_parameters(sections.get("MUSICAL PARAMETERS", ""))
+
+            # Parse production elements
+            production_elements = self._parse_production_elements(sections.get("MUSICAL PARAMETERS", ""))
+
+            # Parse mix notes
+            mix_notes = self._parse_mix_notes(sections.get("MUSICAL PARAMETERS", ""))
+
             return {
                 "metadata": {
-                    "title": "AI Generated Composition",
+                    "title": title,
                     "musical_style": self._extract_style(composition_text),
                     "theme": self._extract_theme(composition_text),
                     "mood": self._extract_mood(composition_text),
                     "language": self._extract_language(composition_text)
                 },
-                "musical_parameters": sections.get("MUSICAL PARAMETERS", {}),
+                "musical_parameters": musical_params,
+                "production": production_elements,
+                "mix_settings": mix_notes,
                 "sections": {
                     "lyrics": sections.get("LYRICS", ""),
-                    "chord_progression": sections.get("CHORD PROGRESSION", ""),
-                    "melody": sections.get("MELODY", ""),
+                    "chord_progression": self._parse_chord_progression(sections.get("CHORD PROGRESSION", "")),
+                    "melody": self._parse_melody(sections.get("MELODY", "")),
                 },
-                "complete_structure": sections.get("COMPLETE SONG STRUCTURE", "")
+                "structure": self._extract_structure(composition_text)
             }
         except Exception as e:
             logger.error(f"Error formatting composition: {str(e)}")
             raise
+
+    def _extract_title(self, params_text: str) -> str:
+        """Extract title from musical parameters section"""
+        try:
+            title_section = params_text.split("[Title]")[1].split("[")[0].strip()
+            return title_section if title_section else "Untitled Composition"
+        except Exception:
+            return "Untitled Composition"
+
+    def _parse_musical_parameters(self, params_text: str) -> Dict[str, Any]:
+        """Parse musical parameters section into structured dictionary"""
+        params = {}
+        try:
+            params_section = params_text.split("[Musical Parameters]")[1].split("[")[0]
+            for line in params_section.split('\n'):
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    key = key.strip().lower().replace(' ', '_')
+                    params[key] = value.strip()
+        except Exception:
+            params = {
+                "tempo": "120 BPM",
+                "key": "C major",
+                "time_signature": "4/4",
+                "genre_specific_feel": "Straight",
+                "dynamic_level": "Medium"
+            }
+        return params
+
+    def _parse_production_elements(self, params_text: str) -> Dict[str, List[str]]:
+        """Parse production elements section into structured dictionary"""
+        elements = {"main_instruments": [], "effects": []}
+        try:
+            prod_section = params_text.split("[Production Elements]")[1].split("[")[0]
+            current_category = None
+
+            for line in prod_section.split('\n'):
+                line = line.strip()
+                if line.startswith("Main Instruments:"):
+                    current_category = "main_instruments"
+                elif line.startswith("Effects:"):
+                    current_category = "effects"
+                elif line.startswith("-") and current_category:
+                    elements[current_category].append(line[1:].strip())
+        except Exception:
+            elements = {
+                "main_instruments": ["Piano", "Bass", "Drums"],
+                "effects": ["Reverb"]
+            }
+        return elements
+
+    def _parse_mix_notes(self, params_text: str) -> Dict[str, str]:
+        """Parse mix notes section into structured dictionary"""
+        mix_notes = {}
+        try:
+            mix_section = params_text.split("[Mix Notes]")[1].split("[")[0]
+            for line in mix_section.split('\n'):
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    key = key.strip().lower().replace(' ', '_')
+                    mix_notes[key] = value.strip()
+        except Exception:
+            mix_notes = {
+                "mix_focus": "Balanced",
+                "stereo_space": "Centered",
+                "eq_focus": "Full range"
+            }
+        return mix_notes
 
     def export_to_json(self, composition_text: str, filepath: str) -> None:
         """Export composition to JSON file"""
