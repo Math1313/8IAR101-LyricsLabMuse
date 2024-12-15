@@ -34,7 +34,7 @@ Install all required packages using the requirements file:
 ```bash
 pip install -r requirements.txt
 ```
-### 3 Setup environment variables
+### 4. Setup environment variables
 - Create a `.env` file in the root directory
 - Add the following variables
 ```bash
@@ -42,7 +42,7 @@ MODEL_URL=http://localhost:1234/v1
 ```
 - You can specify the URL you want. In this case, we use localhost as the model is running locally.
 
-### 4 Create ChromaDB with RAG data
+### 5. Create ChromaDB with RAG data
 ``` bash
 py src/core/create_rag_data.py
 ```
