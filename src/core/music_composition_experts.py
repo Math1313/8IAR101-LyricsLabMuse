@@ -329,6 +329,15 @@ class MusicCompositionExperts:
         chord_chain = chord_prompt | self.llm | StrOutputParser()
         melody_chain = melody_prompt | self.llm | StrOutputParser()
 
+        # Store content for complete structure
+        stored_content = {
+            'title': '',
+            'musical_params': {},
+            'lyrics': {},
+            'chords': {},
+            'melody': {}
+        }
+
         # Generate header
         yield f"""# Song Composition
             Musical Style: {musical_style}
@@ -337,6 +346,7 @@ class MusicCompositionExperts:
             Mood: {mood}
             Language: {language}
             """
+
         # 1. Generate Musical Parameters
         yield "## 1. MUSICAL PARAMETERS\n\n"
         musical_params = ""
@@ -347,23 +357,23 @@ class MusicCompositionExperts:
         }):
             musical_params += chunk
             yield chunk
+            # Extract title if present
+            if "**Title**" in chunk:
+                stored_content['title'] = chunk.split("**Title**")[1].strip().split("\n")[1].strip()
         yield "\n\n"
 
-        # Extract key parameters for use in other sections
-        key = "C major"  # Default values
-        tempo = "120 BPM"
-        time_signature = "4/4"
-
-        # Parse the musical_params to extract actual values
+        # Parse and store musical parameters
         for line in musical_params.split('\n'):
-            if "Key:" in line:
-                key = line.split("Key:")[1].strip()
-            elif "Tempo:" in line:
-                tempo = line.split("Tempo:")[1].strip()
-            elif "Time Signature:" in line:
-                time_signature = line.split("Time Signature:")[1].strip()
+            if ':' in line:
+                key, value = line.split(':', 1)
+                stored_content['musical_params'][key.strip()] = value.strip()
 
-        # 2. Generate Lyrics with musical parameters
+        # Extract key parameters
+        key = stored_content['musical_params'].get('Key', 'C major')
+        tempo = stored_content['musical_params'].get('Tempo', '120 BPM')
+        time_signature = stored_content['musical_params'].get('Time Signature', '4/4')
+
+        # 2. Generate Lyrics
         yield "## 2. LYRICS\n\n"
         lyrics_text = ""
         for chunk in lyrics_chain.stream({
@@ -378,7 +388,16 @@ class MusicCompositionExperts:
             yield chunk
         yield "\n\n"
 
-        # 3. Generate Chords with musical parameters
+        # Store lyrics by section
+        current_section = None
+        for line in lyrics_text.split('\n'):
+            if line.startswith('['):
+                current_section = line.strip('[]')
+                stored_content['lyrics'][current_section] = []
+            elif current_section and line.strip():
+                stored_content['lyrics'][current_section].append(line)
+
+        # 3. Generate Chords
         yield "## 3. CHORD PROGRESSION\n\n"
         chord_text = ""
         for chunk in chord_chain.stream({
@@ -392,7 +411,19 @@ class MusicCompositionExperts:
             yield chunk
         yield "\n\n"
 
-        # 4. Generate Melody with musical parameters
+        # Store chord progressions
+        current_section = None
+        for line in chord_text.split('\n'):
+            if '**' in line and ':' not in line:
+                current_section = line.strip('*')
+                stored_content['chords'][current_section] = {'progression': '', 'rhythm': ''}
+            elif current_section:
+                if 'Chord sequence:' in line:
+                    stored_content['chords'][current_section]['progression'] = line.split(':', 1)[1].strip()
+                elif 'Rhythm:' in line:
+                    stored_content['chords'][current_section]['rhythm'] = line.split(':', 1)[1].strip()
+
+        # 4. Generate Melody
         yield "## 4. MELODY\n\n"
         melody_text = ""
         for chunk in melody_chain.stream({
@@ -406,45 +437,64 @@ class MusicCompositionExperts:
             yield chunk
         yield "\n\n"
 
-        # 5. Generate Combined View
+        # Store melody information
+        current_section = None
+        for line in melody_text.split('\n'):
+            if line.startswith('### ['):
+                current_section = line.strip('#[] ')
+                stored_content['melody'][current_section] = {'scale': '', 'contour': '', 'range': ''}
+            elif current_section:
+                if 'Scale:' in line:
+                    stored_content['melody'][current_section]['scale'] = line.split(':', 1)[1].strip()
+                elif 'Contour:' in line:
+                    stored_content['melody'][current_section]['contour'] = line.split(':', 1)[1].strip()
+                elif 'Range:' in line:
+                    stored_content['melody'][current_section]['range'] = line.split(':', 1)[1].strip()
+
+        # 5. Generate Complete Structure with all information
         yield "## 5. COMPLETE SONG STRUCTURE\n\n"
-        yield f"""[Song Technical Parameters]
-        Key: {key}
-        Tempo: {tempo}
-        Time Signature: {time_signature}
 
-        """
-        # Store the generated content
-        lyrics_sections = self._split_into_sections(lyrics_text)
-        chord_sections = self._split_into_sections(chord_text)
-        melody_sections = self._split_into_sections(melody_text)
+        # Title
+        if stored_content['title']:
+            yield f"Title: {stored_content['title']}\n\n"
 
-        for section in ["Verse 1", "Chorus", "Verse 2", "Bridge", "Final Chorus"]:
-            yield f"[{section}]\n"
+        # Technical Parameters
+        yield "[Song Technical Parameters]\n"
+        for key, value in stored_content['musical_params'].items():
+            if key in ['Key', 'Tempo', 'Time Signature']:
+                yield f"{key}: {value}\n"
+        yield "\n"
 
-            # Extract lyrics
+        # Generate each section with all musical elements
+        for section_name in ['Verse 1', 'Chorus', 'Verse 2', 'Bridge', 'Final Chorus']:
+            yield f"[{section_name}]\n"
+
+            # Lyrics
             yield "Lyrics:\n"
-            if section in lyrics_sections:
-                yield lyrics_sections[section] + "\n"
+            if section_name in stored_content['lyrics']:
+                for line in stored_content['lyrics'][section_name]:
+                    yield f"{line}\n"
             else:
                 yield "(No lyrics for this section)\n"
 
-            # Extract chords
+            # Chords
             yield "Chords:\n"
-            base_section = section.split()[0]  # "Verse 1" -> "Verse"
-            if base_section in chord_sections:
-                yield chord_sections[base_section] + "\n"
-            elif section in chord_sections:  # Try exact match
-                yield chord_sections[section] + "\n"
+            base_section = section_name.split()[0]  # 'Verse 1' -> 'Verse'
+            if base_section in stored_content['chords']:
+                chord_data = stored_content['chords'][base_section]
+                yield f"Progression: {chord_data['progression']}\n"
+                yield f"Rhythm: {chord_data['rhythm']}\n"
             else:
                 yield "(No chord progression for this section)\n"
 
-            # Extract melody
+            # Melody
             yield "Melody:\n"
-            if base_section in melody_sections:
-                yield melody_sections[base_section] + "\n"
-            elif f"{base_section} Melody" in melody_sections:
-                yield melody_sections[f"{base_section} Melody"] + "\n"
+            melody_section = f"{base_section} Melody"
+            if melody_section in stored_content['melody']:
+                melody_data = stored_content['melody'][melody_section]
+                yield f"Scale: {melody_data['scale']}\n"
+                yield f"Contour: {melody_data['contour']}\n"
+                yield f"Range: {melody_data['range']}\n"
             else:
                 yield "(No melody for this section)\n"
 
