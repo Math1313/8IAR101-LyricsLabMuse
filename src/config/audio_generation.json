@@ -1,5 +1,0 @@
-{
-    "api_url": "https://api.audiogen.example.com/generate",
-    "api_key": "your_api_key",
-    "default_method": "local"
-}

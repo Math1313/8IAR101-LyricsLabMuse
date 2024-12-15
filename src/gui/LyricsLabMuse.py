@@ -1,22 +1,22 @@
-# src/gui/LyricsLabMuse.py
-import os
-import sys
-import time
-import logging
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QVBoxLayout, QPushButton,
                              QFrame, QMessageBox, QTextEdit,
                              QScrollArea, QProgressDialog, QStyle, QHBoxLayout, QFileDialog
                              )
-# from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+import logging
+import time
+import sys
+import os
 
-from src.core.music_composition_experts import MusicCompositionExperts
-from src.core.rag_helper import MusicStructureRAG
-from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
-from audio_generation.audiocraft_generator import AudiocraftGenerator
+sys.path.append(os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../")))
+
 from src.gui.components.ui.audio_controls import AudioControls
-
+from src.audio_generation.audiocraft_generator import AudiocraftGenerator
+from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
+from src.core.rag_helper import MusicStructureRAG
+from src.core.music_composition_experts import MusicCompositionExperts
 
 class StreamThread(QThread):
     """Thread pour gérer le streaming de ChatGPT"""
@@ -54,13 +54,16 @@ class AudioGenerationThread(QThread):
         self.song_generator = song_generator
         self.formatted_data = formatted_data
         # Get estimated time from generator
-        self.ESTIMATED_GENERATION_TIME = self.song_generator._estimate_generation_time(formatted_data)
+        self.ESTIMATED_GENERATION_TIME = self.song_generator._estimate_generation_time(
+            formatted_data)
 
     def run(self):
         try:
             # Start progress tracking thread
-            self.progress_thread = ProgressUpdateThread(self.ESTIMATED_GENERATION_TIME)
-            self.progress_thread.progress_updated.connect(self.handle_progress_update)
+            self.progress_thread = ProgressUpdateThread(
+                self.ESTIMATED_GENERATION_TIME)
+            self.progress_thread.progress_updated.connect(
+                self.handle_progress_update)
             self.progress_thread.start()
 
             # Generate audio
@@ -113,7 +116,8 @@ class ProgressUpdateThread(QThread):
             minutes = int(remaining_time // 60)
             seconds = int(remaining_time % 60)
 
-            message = f"Generating audio... Estimated time remaining: {minutes}m {seconds}s"
+            message = f"""Generating audio... Estimated time remaining:
+            {minutes}m {seconds}s"""
             self.progress_updated.emit(progress, message)
 
             time.sleep(1)  # Update every second
@@ -179,7 +183,8 @@ class ModernInterface(QWidget):
             self.apply_dark_theme()
             self.initialize_llm()
         except Exception as e:
-            QMessageBox.critical(self, "UI Initialization Error", f"Failed to initialize UI: {str(e)}")
+            QMessageBox.critical(
+                self, "UI Initialization Error", f"Failed to initialize UI: {str(e)}")
 
     def create_title(self, layout):
         titre = QLabel('LyricsLabMuse')
@@ -235,8 +240,10 @@ class ModernInterface(QWidget):
         self.bouton_mode = QPushButton('🌙 Mode Sombre')
         self.bouton_mode.clicked.connect(self.toggle_theme)
 
-        self.bouton_generer_composition = QPushButton('Générer Composition Complète')
-        self.bouton_generer_composition.clicked.connect(self.generer_full_composition)
+        self.bouton_generer_composition = QPushButton(
+            'Générer Composition Complète')
+        self.bouton_generer_composition.clicked.connect(
+            self.generer_full_composition)
 
         # Add audio generation button
         self.bouton_generer_audio = QPushButton('Générer Audio')
@@ -317,7 +324,8 @@ class ModernInterface(QWidget):
             )
             self.streaming_thread.chunk_ready.connect(
                 self.update_structure_streaming)
-            self.streaming_thread.stream_complete.connect(self.on_stream_complete)
+            self.streaming_thread.stream_complete.connect(
+                self.on_stream_complete)
             self.streaming_thread.start()
 
         except Exception as e:
@@ -561,7 +569,8 @@ class ModernInterface(QWidget):
                 raise ValueError("All fields must be filled")
 
             # Create progress dialog with smaller steps
-            self.progress = QProgressDialog("Preparing audio generation...", "Cancel", 0, 100, self)
+            self.progress = QProgressDialog(
+                "Preparing audio generation...", "Cancel", 0, 100, self)
             self.progress.setWindowTitle("Generating Audio")
             self.progress.setWindowModality(Qt.WindowModal)
             self.progress.setAutoClose(True)
@@ -575,7 +584,8 @@ class ModernInterface(QWidget):
             # Get and validate composition data
             composition_text = self.full_composition_field.toPlainText()
             if not composition_text:
-                QMessageBox.warning(self, "Error", "Please generate composition first")
+                QMessageBox.warning(
+                    self, "Error", "Please generate composition first")
                 return
 
             # Parse and format data
@@ -598,12 +608,16 @@ class ModernInterface(QWidget):
             })
 
             # Create and configure audio generation thread
-            self.audio_thread = AudioGenerationThread(self.song_generator, formatted_data)
+            self.audio_thread = AudioGenerationThread(
+                self.song_generator, formatted_data)
 
             # Connect signals
-            self.audio_thread.progress_updated.connect(self.update_generation_progress)
-            self.audio_thread.generation_complete.connect(self.handle_generation_complete)
-            self.audio_thread.generation_error.connect(self.handle_generation_error)
+            self.audio_thread.progress_updated.connect(
+                self.update_generation_progress)
+            self.audio_thread.generation_complete.connect(
+                self.handle_generation_complete)
+            self.audio_thread.generation_error.connect(
+                self.handle_generation_error)
 
             # Connect cancel button
             self.progress.canceled.connect(self.audio_thread.terminate)
@@ -614,13 +628,15 @@ class ModernInterface(QWidget):
         except ValueError as e:
             QMessageBox.warning(self, "Input Error", str(e))
         except Exception as e:
-            QMessageBox.critical(self, "Audio Generation Error", f"Failed to generate audio: {str(e)}")
+            QMessageBox.critical(self, "Audio Generation Error",
+                                 f"Failed to generate audio: {str(e)}")
             logging.error(f"Audio generation error: {str(e)}")
 
     def update_generation_progress(self, percent, message):
         """Update progress dialog"""
         if self.progress is not None:
-            print(f"Debug - Updating progress dialog: {percent}% - {message}")  # Debug line
+            # Debug line
+            print(f"Debug - Updating progress dialog: {percent}% - {message}")
             self.progress.setLabelText(f"{message}\n{percent}% complete")
             self.progress.setValue(percent)
 
@@ -628,19 +644,23 @@ class ModernInterface(QWidget):
         """Handle successful generation"""
         if "instrumental" in result:
             self.handle_audio_output(result["instrumental"])
-            QMessageBox.information(self, "Generation Complete", "Audio generation completed successfully!")
+            QMessageBox.information(
+                self, "Generation Complete", "Audio generation completed successfully!")
         else:
-            QMessageBox.warning(self, "Generation Error", "No audio was generated")
+            QMessageBox.warning(self, "Generation Error",
+                                "No audio was generated")
 
     def handle_generation_error(self, error_message):
         """Handle generation error"""
-        QMessageBox.critical(self, "Generation Error", f"Failed to generate audio: {error_message}")
+        QMessageBox.critical(self, "Generation Error",
+                             f"Failed to generate audio: {error_message}")
 
     def _extract_lyrics(self, composition_text):
         """Extract lyrics from composition text"""
         # Add logic to extract lyrics section from composition text
         if "## LYRICS" in composition_text:
-            lyrics_section = composition_text.split("## LYRICS")[1].split("##")[0]
+            lyrics_section = composition_text.split("## LYRICS")[
+                1].split("##")[0]
             return lyrics_section.strip()
         return ""
 
@@ -648,7 +668,8 @@ class ModernInterface(QWidget):
         """Extract chord progression from composition text"""
         # Add logic to extract chord section from composition text
         if "## CHORD PROGRESSION" in composition_text:
-            chord_section = composition_text.split("## CHORD PROGRESSION")[1].split("##")[0]
+            chord_section = composition_text.split(
+                "## CHORD PROGRESSION")[1].split("##")[0]
             return chord_section.strip()
         return ""
 
@@ -656,7 +677,8 @@ class ModernInterface(QWidget):
         """Extract lyrics from composition text"""
         # Add logic to extract lyrics section from composition text
         if "## LYRICS" in composition_text:
-            lyrics_section = composition_text.split("## LYRICS")[1].split("##")[0]
+            lyrics_section = composition_text.split("## LYRICS")[
+                1].split("##")[0]
             return lyrics_section.strip()
         return ""
 
@@ -664,7 +686,8 @@ class ModernInterface(QWidget):
         """Extract chord progression from composition text"""
         # Add logic to extract chord section from composition text
         if "## CHORD PROGRESSION" in composition_text:
-            chord_section = composition_text.split("## CHORD PROGRESSION")[1].split("##")[0]
+            chord_section = composition_text.split(
+                "## CHORD PROGRESSION")[1].split("##")[0]
             return chord_section.strip()
         return ""
 
@@ -672,7 +695,8 @@ class ModernInterface(QWidget):
         """Handle the generated audio file"""
         try:
             if not os.path.exists(audio_path):
-                raise FileNotFoundError(f"Generated audio file not found at {audio_path}")
+                raise FileNotFoundError(
+                    f"Generated audio file not found at {audio_path}")
 
             # We need to load this in audio_controls
             if self.audio_controls.load_audio(audio_path):
@@ -681,7 +705,8 @@ class ModernInterface(QWidget):
                 QMessageBox.warning(self, "Error", "Failed to load audio file")
 
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Audio playback failed: {str(e)}")
+            QMessageBox.warning(
+                self, "Error", f"Audio playback failed: {str(e)}")
             logging.error(f"Audio playback error: {str(e)}")
 
     def setup_audio(self, layout):
@@ -743,11 +768,13 @@ class ModernInterface(QWidget):
         export_layout.addWidget(export_label)
 
         self.export_json_button = QPushButton('Export to JSON')
-        self.export_json_button.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.export_json_button.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.export_json_button.clicked.connect(self.export_to_json)
 
         self.export_txt_button = QPushButton('Export to TXT')
-        self.export_txt_button.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.export_txt_button.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.export_txt_button.clicked.connect(self.export_to_txt)
 
         export_layout.addWidget(self.export_json_button)
@@ -765,10 +792,12 @@ class ModernInterface(QWidget):
                 composition_text = self.full_composition_field.toPlainText()
                 formatter = MusicCompositionExportFormatter()
                 formatter.export_to_json(composition_text, filepath)
-                QMessageBox.information(self, "Success", "Song exported to JSON successfully!")
+                QMessageBox.information(
+                    self, "Success", "Song exported to JSON successfully!")
 
         except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Failed to export to JSON: {str(e)}")
+            QMessageBox.critical(self, "Export Error",
+                                 f"Failed to export to JSON: {str(e)}")
 
     def export_to_txt(self):
         """Handle TXT export"""
@@ -781,10 +810,13 @@ class ModernInterface(QWidget):
                 composition_text = self.full_composition_field.toPlainText()
                 formatter = MusicCompositionExportFormatter()
                 formatter.export_to_txt(composition_text, filepath)
-                QMessageBox.information(self, "Success", "Song exported to TXT successfully!")
+                QMessageBox.information(
+                    self, "Success", "Song exported to TXT successfully!")
 
         except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Failed to export to TXT: {str(e)}")
+            QMessageBox.critical(self, "Export Error",
+                                 f"Failed to export to TXT: {str(e)}")
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

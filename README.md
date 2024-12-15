@@ -1,21 +1,51 @@
 # LyricsLabMuse
+
 ## Get started
-- Clone the repository
-- Setup environment variables
-    - Create a `.env` file in the root directory
-    - Add the following variables
-        ```
-        MODEL_URL=http://localhost:1234/v1
-        ```
-    - You can specify the URL you want. In this case, we use localhost as the model is running locally.
-- Install requiered libraries
-    ```
-    pip install -r requirements.txt
-    ```
-- Create ChromaDB with RAG data
-    ```
-    py create_rag_data.py
-    ```
+### 1. Clone the repository
+```bash
+git clone https://github.com/Math1313/8IAR101-LyricsLabMuse.git
+```
+### 2. Create Virtual Environment
+You will need to install python 3.9.
+First, create a virtual environment:
+
+```bash
+# Windows
+py -3.9 -m venv .venv
+
+# Unix/MacOS
+python3.9 -m venv .venv
+```
+
+### 2. Activate Virtual Environment
+
+```bash
+# Windows
+.\.venv\Scripts\activate 
+
+# Unix/MacOS
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+Install all required packages using the requirements file:
+
+```bash
+pip install -r requirements.txt
+```
+### 3 Setup environment variables
+- Create a `.env` file in the root directory
+- Add the following variables
+```bash
+MODEL_URL=http://localhost:1234/v1
+```
+- You can specify the URL you want. In this case, we use localhost as the model is running locally.
+
+### 4 Create ChromaDB with RAG data
+``` bash
+py src/core/create_rag_data.py
+```
 # *********Pour Audiocraft ===>> EXPLOSION de l'environnement:D
 ### pip fresh start
 pip freeze > installed_packages.txt

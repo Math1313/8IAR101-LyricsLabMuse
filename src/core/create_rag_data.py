@@ -6,8 +6,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 from langchain_chroma import Chroma
 
-CHROMA_PATH = "./chroma/"
-DATA_PATH = "./ragData/"
+CHROMA_PATH = "../../chroma/"
+DATA_PATH = "../../ragData/"
 
 embedding_function = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2")
