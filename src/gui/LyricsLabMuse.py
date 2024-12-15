@@ -53,7 +53,8 @@ class AudioGenerationThread(QThread):
         super().__init__()
         self.song_generator = song_generator
         self.formatted_data = formatted_data
-        self.ESTIMATED_GENERATION_TIME = 300  # 5 minutes in seconds
+        # Get estimated time from generator
+        self.ESTIMATED_GENERATION_TIME = self.song_generator._estimate_generation_time(formatted_data)
 
     def run(self):
         try:

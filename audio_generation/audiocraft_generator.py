@@ -236,3 +236,26 @@ class AudiocraftGenerator:
         except Exception as e:
             logger.error(f"Error saving audio: {str(e)}")
             raise
+
+    def _estimate_generation_time(self, composition_data: Dict[str, Any]) -> int:
+        """
+        Estimate generation time based on audio parameters
+        Returns estimated time in seconds
+        """
+        # Get base generation parameters
+        duration = self.music_model.generation_params.get('duration', 30)
+
+        # Factor in model size
+        # 'small' model is faster than 'medium' or 'large'
+        model_multiplier = 1.0  # For 'small' model
+
+        # Base time: roughly 10 seconds per second of audio for 'small' model
+        base_time = duration * 10
+
+        # Add overhead for initialization and saving
+        overhead = 30  # seconds
+
+        estimated_time = (base_time * model_multiplier) + overhead
+
+        logger.info(f"Estimated generation time: {estimated_time} seconds for {duration}s of audio")
+        return int(estimated_time)
