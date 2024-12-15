@@ -304,14 +304,14 @@ class ModernInterface(QWidget):
 
         # Get structure using new RAG
         try:
-            structure = self.rag.query_rag(musicalStyle)
-
             # Reset the structure field
             self.structure_field.clear()
 
             # Stop any existing streaming thread
             if self.streaming_thread and self.streaming_thread.isRunning():
                 self.streaming_thread.terminate()
+
+            structure = self.rag.query_rag(musicalStyle)
 
             # Create and start new streaming thread
             self.streaming_thread = StreamThread(
