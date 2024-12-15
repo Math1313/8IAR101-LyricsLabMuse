@@ -5,7 +5,6 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from typing import Dict, List, Tuple
 
-# Maintain original paths
 CHROMA_PATH = "../../chroma/"
 DATA_PATH = "../../ragData/"
 
@@ -40,8 +39,99 @@ class MusicStructureRAG:
         )
 
     def _augment_query(self, music_style: str) -> str:
-        """Create an enhanced query for better context retrieval"""
-        return f"{music_style} music structure typical standard form"
+        """Create an enhanced query with comprehensive genre fallbacks"""
+        # Define detailed genre mappings for similar styles
+        # If genre isn't in the RAG
+        genre_mappings = {
+            # Rock-based genres
+            'punk': 'rock',
+            'metal': 'rock',
+            'hard rock': 'rock',
+            'indie': 'rock',
+            'alternative': 'rock',
+            'grunge': 'rock',
+            'post-rock': 'rock',
+            'psychedelic': 'rock',
+            'progressive rock': 'rock',
+
+            # Electronic genres
+            'techno': 'edm',
+            'house': 'edm',
+            'trance': 'edm',
+            'dubstep': 'edm',
+            'drum and bass': 'edm',
+            'ambient': 'edm',
+            'electronica': 'edm',
+            'synthwave': 'edm',
+            'breakbeat': 'edm',
+
+            # Pop variations
+            'indie pop': 'pop',
+            'synth pop': 'pop',
+            'k-pop': 'pop',
+            'j-pop': 'pop',
+            'pop rock': 'pop',
+            'acoustic': 'pop',
+            'teen pop': 'pop',
+            'power pop': 'pop',
+
+            # Hip-hop/Rap variations
+            'hip hop': 'rap',
+            'trap': 'rap',
+            'grime': 'rap',
+            'drill': 'rap',
+            'boom bap': 'rap',
+            'conscious rap': 'rap',
+
+            # Folk/Country variations
+            'folk': 'country',
+            'bluegrass': 'country',
+            'americana': 'country',
+            'country rock': 'country',
+            'western': 'country',
+
+            # R&B variations
+            'rnb': 'rhythm and blues',
+            'soul': 'rhythm and blues',
+            'neo soul': 'rhythm and blues',
+            'contemporary rb': 'rhythm and blues',
+            'funk': 'rhythm and blues',
+
+            # Jazz variations
+            'bebop': 'jazz',
+            'swing': 'jazz',
+            'fusion': 'jazz',
+            'smooth jazz': 'jazz',
+            'latin jazz': 'jazz',
+            'free jazz': 'jazz',
+
+            # Reggae variations
+            'ska': 'reggae',
+            'dancehall': 'reggae',
+            'dub': 'reggae',
+            'rocksteady': 'reggae',
+
+            # Blues variations
+            'delta blues': 'blues',
+            'chicago blues': 'blues',
+            'electric blues': 'blues',
+            'rhythm and blues': 'blues',
+
+            # Classical variations
+            'baroque': 'classical',
+            'romantic': 'classical',
+            'contemporary classical': 'classical',
+            'neo-classical': 'classical',
+            'chamber music': 'classical',
+            'orchestral': 'classical'
+        }
+
+        # Get base genre if the specific style isn't found
+        # Convert to lowercase and strip whitespace for better matching
+        clean_style = music_style.lower().strip()
+        base_genre = genre_mappings.get(clean_style, music_style)
+
+        return f"{base_genre} music structure typical standard form"
 
     def _retrieve_context(self, query: str) -> List[Tuple[str, float]]:
         """Retrieve relevant context"""
@@ -56,30 +146,30 @@ class MusicStructureRAG:
         relevant_results = [
             (doc.page_content, score)
             for doc, score in results
-            if score >= 0.55  # Keep original threshold
+            if score >= 0.55
         ]
 
         return relevant_results
 
     def query_rag(self, music_style: str) -> str:
-        """Main method to query the RAG system"""
+        """Main method to query the RAG system with improved error handling"""
         try:
-            print(music_style)  # Keep original debug print
+            print(f"Processing genre: {music_style}")
 
             # Create query and get context
             augmented_query = self._augment_query(music_style)
             results = self._retrieve_context(augmented_query)
 
             if not results:
-                print("Unable to find matching results.")
-                return f"Standard {music_style} structure not found"
+                # If no results found, use rock structure as fallback
+                fallback_structure = "Intro → Verse 1 → Chorus → Verse 2 → Chorus → Bridge → Chorus → Outro"
+                print(f"No structure found for {music_style}, using default rock structure")
+                return fallback_structure
 
             # Combine context from matching documents
-            context_text = "\n\n---\n\n".join(
-                [doc for doc, _score in results]
-            )
+            context_text = "\n\n---\n\n".join([doc for doc, _score in results])
 
-            print("Generating structured list...")  # Keep original debug print
+            print("Generating structured list...")
 
             # Create and execute prompt
             prompt_template = ChatPromptTemplate.from_template(self.PROMPT_TEMPLATE)
@@ -92,12 +182,17 @@ class MusicStructureRAG:
             response = self.llm.invoke(prompt).content
             cleaned_response = self._clean_response(response)
 
-            print(cleaned_response)  # Keep original debug print
+            if not cleaned_response or "→" not in cleaned_response:
+                # Return default structure if response is invalid
+                return "Intro → Verse 1 → Chorus → Verse 2 → Chorus → Bridge → Chorus → Outro"
+
+            print(cleaned_response)
             return cleaned_response
 
         except Exception as e:
             print(f"Error in RAG query: {str(e)}")
-            return f"Error generating {music_style} structure"
+            # Return a safe fallback structure
+            return "Intro → Verse 1 → Chorus → Verse 2 → Chorus → Bridge → Chorus → Outro"
 
     def _clean_response(self, response: str) -> str:
         """Clean and standardize the response"""

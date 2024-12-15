@@ -2,6 +2,7 @@ from audiocraft.models import MusicGen
 import torch
 import logging
 import os
+from datetime import datetime
 from typing import Dict, Any
 
 logging.basicConfig(level=logging.INFO)
@@ -38,52 +39,107 @@ class AudiocraftGenerator:
                 duration=duration  # Duration in seconds
             )
 
-    def generate_full_song(self, composition_data: Dict[str, Any]) -> Dict[str, str]:
-        """
-        Generate a complete song based on composition data
-        Args:
-            composition_data: Dictionary containing song metadata and structure
-        Returns:
-            Dictionary containing paths to generated audio files
-        """
+    def generate_full_song(self, composition_data: Dict[str, Any], progress_callback=None) -> Dict[str, str]:
         try:
-            # Extract relevant information for prompt construction
-            style = composition_data["music_metadata"]["musical_style"]
-            mood = composition_data["music_metadata"]["mood"]
-            tempo = composition_data["music_metadata"]["tempo_bpm"]
-            key = composition_data["music_metadata"]["primary_key"]
+            # Generate timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-            # Construct detailed prompt for music generation
+            # Extract metadata for filename
+            style = composition_data["music_metadata"]["musical_style"]
+            theme = composition_data.get("metadata", {}).get("theme", "no_theme")
+            mood = composition_data["music_metadata"]["mood"]
+            language = composition_data.get("metadata", {}).get("language", "no_lang")
+
+            # Clean metadata values for safe filename
+            def clean_filename(text: str) -> str:
+                # Replace spaces and special characters
+                return text.lower().replace(" ", "_").replace("/", "_")
+
+            # Create filename with all parameters
+            filename = f"{timestamp}_{clean_filename(style)}_{clean_filename(theme)}_{clean_filename(mood)}_{clean_filename(language)}.wav"
+
+            # Create output directory
+            output_dir = os.path.join("output", "generated")
+            os.makedirs(output_dir, exist_ok=True)
+
+            instrumental_path = os.path.join(output_dir, filename)
+
+            # Generate prompt from composition data
             prompt = self._construct_generation_prompt(
-                style=style,
-                mood=mood,
-                tempo=tempo,
-                key=key,
+                style=composition_data["music_metadata"]["musical_style"],
+                mood=composition_data["music_metadata"]["mood"],
+                tempo=composition_data["music_metadata"]["tempo_bpm"],
+                key=composition_data["music_metadata"]["primary_key"],
                 composition_data=composition_data
             )
 
-            # Calculate appropriate duration based on structure
-            duration = self._calculate_song_duration(composition_data)
-            self.set_generation_params(duration=duration)
-
-            # Generate the audio
-            logger.info(f"Generating audio with prompt: {prompt}")
+            # Generate and save audio
             wav = self.music_model.generate([prompt])
-
-            # Save the generated audio
-            output_dir = "output/generated"
-            os.makedirs(output_dir, exist_ok=True)
-
-            instrumental_path = os.path.join(output_dir, "instrumental.wav")
             self.save_audio(wav, instrumental_path)
+
+            logger.info(f"Generated audio file: {filename}")
+
+            if progress_callback:
+                progress_callback(100, "Audio generation complete!")
 
             return {
                 "instrumental": instrumental_path
             }
 
         except Exception as e:
+            if progress_callback:
+                progress_callback(-1, f"Error: {str(e)}")
             logger.error(f"Error generating full song: {str(e)}")
             raise
+
+    def _construct_generation_prompt(self, style: str, mood: str, tempo: int,
+                                     key: str, composition_data: Dict[str, Any]) -> str:
+        """
+        Construct a detailed prompt using all musical information
+        """
+        # Extract melody information
+        melody_data = composition_data.get('melody_data', '')
+        melody_scale = ''
+        melody_contour = ''
+        if melody_data:
+            # Parse melody information
+            for line in melody_data.split('\n'):
+                if 'Scale:' in line:
+                    melody_scale = line.split('Scale:')[1].strip()
+                elif 'Contour:' in line:
+                    melody_contour = line.split('Contour:')[1].strip()
+
+        # Extract chord progression
+        chord_progression = composition_data.get('musical_structure', {}).get(
+            'chord_progression', {}).get('raw_progression', '')
+
+        # Get genre-specific feel from musical parameters
+        genre_feel = composition_data.get('music_metadata', {}).get('genre_specific_feel', 'standard')
+
+        # Construct detailed prompt
+        prompt = (
+            f"Generate {style} music "
+            f"in {key} at {tempo} BPM. "
+        )
+
+        # Add melody information if available
+        if melody_scale and melody_contour:
+            prompt += (
+                f"Use {melody_scale} scale with {melody_contour} melody movement. "
+            )
+
+        # Add chord progression if available
+        if chord_progression:
+            prompt += f"Follow chord progression: {chord_progression}. "
+
+        # Add mood and feel
+        prompt += (
+            f"Create a {mood} atmosphere with {genre_feel} feel. "
+            f"Make it sound professional and well-produced with clear "
+            f"transitions between sections."
+        )
+
+        return prompt
 
     def _construct_generation_prompt(self, style: str, mood: str, tempo: int,
                                      key: str, composition_data: Dict[str, Any]) -> str:

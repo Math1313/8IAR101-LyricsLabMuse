@@ -170,15 +170,18 @@ class AudioControls(QWidget):
                 QMessageBox.warning(self, "Error", "No audio loaded to save")
                 return
 
+            # Get the original filename
+            original_filename = os.path.basename(self.current_audio_path)
+
+            # Use the original filename as default
             file_name = QFileDialog.getSaveFileName(
                 self,
                 "Save Audio File",
-                os.path.expanduser("~/Music"),  # Default to Music directory
+                os.path.join(os.path.expanduser("~/Music"), original_filename),
                 "Audio Files (*.wav);;All Files (*)"
             )[0]
 
             if file_name:
-                # Copy the file to new location
                 import shutil
                 shutil.copy2(self.current_audio_path, file_name)
                 QMessageBox.information(self, "Success", "Audio saved successfully!")

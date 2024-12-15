@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QVBoxLayout, QPushButton,
                              QFrame, QMessageBox, QTextEdit,
-                             QScrollArea, QProgressDialog
+                             QScrollArea, QProgressDialog, QStyle, QHBoxLayout, QFileDialog
                              )
 # from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 
@@ -144,10 +144,12 @@ class ModernInterface(QWidget):
         try:
 
             self.setWindowTitle('LyricsLabMuse')
-            self.setGeometry(100, 100, 800, 700)
+            self.setGeometry(100, 100, 800, 1200)
 
             # Start the application max size
-            self.showMaximized()
+            # self.showMaximized()
+            # Start the app normal
+            self.showNormal()
 
             main_layout = QVBoxLayout()
 
@@ -164,6 +166,8 @@ class ModernInterface(QWidget):
             self.create_input_sections(content_layout)
             self.create_buttons(content_layout)
             self.create_full_composition_section(content_layout)
+
+            self.create_export_buttons(content_layout)  # Add export buttons
 
             # Add audio controls here
             self.setup_audio(content_layout)  # Pass the layout as parameter
@@ -670,6 +674,7 @@ class ModernInterface(QWidget):
             if not os.path.exists(audio_path):
                 raise FileNotFoundError(f"Generated audio file not found at {audio_path}")
 
+            # We need to load this in audio_controls
             if self.audio_controls.load_audio(audio_path):
                 self.audio_controls.play_button.click()  # Start playing
             else:
@@ -730,6 +735,56 @@ class ModernInterface(QWidget):
             'full_structure': sections.get("COMPLETE SONG STRUCTURE", "")
         }
 
+    def create_export_buttons(self, layout):
+        """Create export buttons for JSON and TXT formats"""
+        export_layout = QHBoxLayout()
+
+        export_label = QLabel("Export Composition:")
+        export_layout.addWidget(export_label)
+
+        self.export_json_button = QPushButton('Export to JSON')
+        self.export_json_button.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.export_json_button.clicked.connect(self.export_to_json)
+
+        self.export_txt_button = QPushButton('Export to TXT')
+        self.export_txt_button.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.export_txt_button.clicked.connect(self.export_to_txt)
+
+        export_layout.addWidget(self.export_json_button)
+        export_layout.addWidget(self.export_txt_button)
+        layout.addLayout(export_layout)
+
+    def export_to_json(self):
+        """Handle JSON export"""
+        try:
+            filepath, _ = QFileDialog.getSaveFileName(
+                self, 'Save JSON File', '', 'JSON Files (*.json)'
+            )
+
+            if filepath:
+                composition_text = self.full_composition_field.toPlainText()
+                formatter = MusicCompositionExportFormatter()
+                formatter.export_to_json(composition_text, filepath)
+                QMessageBox.information(self, "Success", "Song exported to JSON successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Export Error", f"Failed to export to JSON: {str(e)}")
+
+    def export_to_txt(self):
+        """Handle TXT export"""
+        try:
+            filepath, _ = QFileDialog.getSaveFileName(
+                self, 'Save Text File', '', 'Text Files (*.txt)'
+            )
+
+            if filepath:
+                composition_text = self.full_composition_field.toPlainText()
+                formatter = MusicCompositionExportFormatter()
+                formatter.export_to_txt(composition_text, filepath)
+                QMessageBox.information(self, "Success", "Song exported to TXT successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Export Error", f"Failed to export to TXT: {str(e)}")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

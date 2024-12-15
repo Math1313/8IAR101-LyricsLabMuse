@@ -244,6 +244,55 @@ class MusicCompositionExperts:
             elif in_complete_structure:
                 yield chunk
 
+    def _format_complete_structure(self, lyrics: str, chord_progression: str, melody: str) -> str:
+        """Format the complete song structure with proper section mapping"""
+
+        # Parse sections
+        lyrics_sections = self._parse_lyrics_sections(lyrics)
+        chord_sections = self._parse_chord_sections(chord_progression)
+        melody_sections = self._parse_melody_sections(melody)
+
+        # Build combined structure
+        structure = []
+
+        # Add technical parameters
+        structure.append("[Song Technical Parameters]")
+        for param in ["Key", "Tempo", "Time Signature"]:
+            if param.lower() in self.current_parameters:
+                structure.append(f"{param}: {self.current_parameters[param.lower()]}")
+        structure.append("")
+
+        # Combine sections
+        section_order = ["Verse 1", "Chorus", "Verse 2", "Bridge", "Final Chorus"]
+        for section in section_order:
+            structure.append(f"[{section}]")
+
+            # Add lyrics
+            structure.append("Lyrics:")
+            if section in lyrics_sections:
+                structure.append(lyrics_sections[section])
+            else:
+                structure.append("(No lyrics for this section)")
+
+            # Add chords
+            structure.append("Chords:")
+            base_section = section.split()[0]  # "Verse 1" -> "Verse"
+            if base_section in chord_sections:
+                structure.append(chord_sections[base_section])
+            else:
+                structure.append("(No chord progression for this section)")
+
+            # Add melody
+            structure.append("Melody:")
+            if base_section in melody_sections:
+                structure.append(melody_sections[base_section])
+            else:
+                structure.append("(No melody for this section)")
+
+            structure.append("")
+
+        return "\n".join(structure)
+
     def generate_song_composition(self, musical_style, structure, song_theme, mood, language):
         """Generate a complete song composition with musical parameters."""
         # Create prompt templates
