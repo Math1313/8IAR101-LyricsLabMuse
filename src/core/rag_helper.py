@@ -5,8 +5,9 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from typing import Dict, List, Tuple
 
-CHROMA_PATH = "../../chroma/"
-DATA_PATH = "../../ragData/"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+CHROMA_PATH = os.path.join(current_dir, "../../chroma/")
+DATA_PATH = os.path.join(current_dir, "../../ragData/")
 
 
 class MusicStructureRAG:
@@ -131,7 +132,7 @@ class MusicStructureRAG:
         clean_style = music_style.lower().strip()
         base_genre = genre_mappings.get(clean_style, music_style)
 
-        return f"{base_genre} music structure typical standard form"
+        return f"{base_genre} Music Typical Structure Intro Outro"
 
     def _retrieve_context(self, query: str) -> List[Tuple[str, float]]:
         """Retrieve relevant context"""
@@ -139,17 +140,17 @@ class MusicStructureRAG:
             persist_directory=CHROMA_PATH,
             embedding_function=self.embedding_function
         )
-
         results = db.similarity_search_with_relevance_scores(query, k=3)
 
         # Filter results with relevance threshold
         relevant_results = [
             (doc.page_content, score)
             for doc, score in results
-            if score >= 0.55
+            if score >= 0.45
         ]
 
         return relevant_results
+    
 
     def query_rag(self, music_style: str) -> str:
         """Main method to query the RAG system with improved error handling"""
@@ -185,8 +186,7 @@ class MusicStructureRAG:
             if not cleaned_response or "→" not in cleaned_response:
                 # Return default structure if response is invalid
                 return "Intro → Verse 1 → Chorus → Verse 2 → Chorus → Bridge → Chorus → Outro"
-
-            print(cleaned_response)
+            
             return cleaned_response
 
         except Exception as e:
