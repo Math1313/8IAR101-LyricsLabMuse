@@ -12,119 +12,13 @@ import os
 sys.path.append(os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../")))
 
-from src.gui.components.ui.audio_controls import AudioControls
+from src.gui.components.stream_thread import StreamThread
+from src.gui.components.audio_thread import AudioGenerationThread
+from src.gui.components.audio_controls import AudioControls
+from src.gui.components.themes import apply_dark_theme, apply_light_theme
 from src.core.audiocraft_generator import AudiocraftGenerator
 from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
 from src.core.rag_helper import MusicStructureRAG
-from src.core.music_composition_experts import MusicCompositionExperts
-
-class StreamThread(QThread):
-    """Thread pour gérer le streaming de ChatGPT"""
-    chunk_ready = pyqtSignal(str)
-    stream_complete = pyqtSignal()
-
-    def __init__(self, function, *args):
-        super().__init__()
-        self.function = function
-        self.args = args
-
-    def run(self):
-        try:
-            music_composer = MusicCompositionExperts()
-            stream = getattr(music_composer, self.function)(*self.args)
-
-            # Parcourir le flux de réponse
-            for chunk in stream:
-                if chunk:
-                    self.chunk_ready.emit(chunk)
-
-            self.stream_complete.emit()
-        except Exception as e:
-            self.chunk_ready.emit(f"Erreur : {str(e)}")
-            self.stream_complete.emit()
-
-
-class AudioGenerationThread(QThread):
-    progress_updated = pyqtSignal(int, str)
-    generation_complete = pyqtSignal(dict)
-    generation_error = pyqtSignal(str)
-
-    def __init__(self, song_generator, formatted_data):
-        super().__init__()
-        self.song_generator = song_generator
-        self.formatted_data = formatted_data
-        # Get estimated time from generator
-        self.ESTIMATED_GENERATION_TIME = self.song_generator._estimate_generation_time(
-            formatted_data)
-
-    def run(self):
-        try:
-            # Start progress tracking thread
-            self.progress_thread = ProgressUpdateThread(
-                self.ESTIMATED_GENERATION_TIME)
-            self.progress_thread.progress_updated.connect(
-                self.handle_progress_update)
-            self.progress_thread.start()
-
-            # Generate audio
-            result = self.song_generator.generate_full_song(
-                self.formatted_data,
-                progress_callback=self.handle_generation_progress
-            )
-
-            # Stop progress thread and emit completion
-            self.progress_thread.stop()
-            self.progress_thread.wait()
-            self.progress_updated.emit(100, "Audio generation complete!")
-            self.generation_complete.emit(result)
-
-        except Exception as e:
-            if hasattr(self, 'progress_thread'):
-                self.progress_thread.stop()
-                self.progress_thread.wait()
-            self.generation_error.emit(str(e))
-
-    def handle_progress_update(self, progress, message):
-        """Handle progress updates from progress thread"""
-        self.progress_updated.emit(progress, message)
-
-    def handle_generation_progress(self, percent, message):
-        """Handle milestone progress updates from generation"""
-        if percent == 100:
-            self.progress_thread.stop()
-            self.progress_thread.wait()
-            self.progress_updated.emit(100, "Audio generation complete!")
-
-
-class ProgressUpdateThread(QThread):
-    progress_updated = pyqtSignal(int, str)
-
-    def __init__(self, estimated_time=300):
-        super().__init__()
-        self.estimated_time = estimated_time
-        self.running = True
-        import time
-        self.start_time = time.time()
-
-    def run(self):
-        import time
-        while self.running:
-            elapsed_time = time.time() - self.start_time
-            progress = min(int((elapsed_time / self.estimated_time) * 100), 99)
-
-            remaining_time = max(self.estimated_time - elapsed_time, 0)
-            minutes = int(remaining_time // 60)
-            seconds = int(remaining_time % 60)
-
-            message = f"""Generating audio... Estimated time remaining:
-            {minutes}m {seconds}s"""
-            self.progress_updated.emit(progress, message)
-
-            time.sleep(1)  # Update every second
-
-    def stop(self):
-        self.running = False
-
 
 class ModernInterface(QWidget):
     def __init__(self):
@@ -180,8 +74,7 @@ class ModernInterface(QWidget):
             main_layout.addWidget(scroll_area)
             self.setLayout(main_layout)
 
-            self.apply_dark_theme()
-            self.initialize_llm()
+            apply_dark_theme(self)
         except Exception as e:
             QMessageBox.critical(
                 self, "UI Initialization Error", f"Failed to initialize UI: {str(e)}")
@@ -253,127 +146,25 @@ class ModernInterface(QWidget):
         layout.addWidget(self.bouton_generer_composition)
         layout.addWidget(self.bouton_generer_audio)
 
-    def initialize_llm(self):
-        try:
-            self.chatgpt_integration = MusicCompositionExperts()
-        except Exception as e:
-            QMessageBox.critical(self, "LLM Initialization Error",
-                                 f"Failed to initialize language model: {str(e)}")
-            raise
 
-    def generer_lyrics(self):
-        # Récupérer les informations nécessaires
+    def get_song_info(self):
         musicalStyle = self.text_fields[0].text()
         songTheme = self.text_fields[1].text()
         mood = self.text_fields[2].text()
         language = self.text_fields[3].text()
-
-        # Vérifier que les champs ne sont pas vides
-        if not musicalStyle or not songTheme or not mood or not language:
-            QMessageBox.warning(
-                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
-            return
-
-        # Réinitialiser le champ de lyrics
-        self.lyrics_field.clear()
-
-        # Arrêter tout thread de streaming précédent
-        if self.streaming_thread and self.streaming_thread.isRunning():
-            self.streaming_thread.terminate()
-
-        # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread(
-            'generate_lyrics', musicalStyle, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(self.update_lyrics_streaming)
-        self.streaming_thread.stream_complete.connect(self.on_stream_complete)
-        self.streaming_thread.start()
-
-    def generer_song_structure(self):
-        """Generate song structure using the improved RAG"""
-        # Get necessary information
-        musicalStyle = self.text_fields[0].text()
-        songTheme = self.text_fields[1].text()
-        mood = self.text_fields[2].text()
-        language = self.text_fields[3].text()
-
-        # Validate inputs
-        if not all([musicalStyle, songTheme, mood, language]):
-            QMessageBox.warning(
-                self, "Error", "Please fill in all required fields")
-            return
-
-        # Get structure using new RAG
-        try:
-            # Reset the structure field
-            self.structure_field.clear()
-
-            # Stop any existing streaming thread
-            if self.streaming_thread and self.streaming_thread.isRunning():
-                self.streaming_thread.terminate()
-
-            structure = self.rag.query_rag(musicalStyle)
-
-            # Create and start new streaming thread
-            self.streaming_thread = StreamThread(
-                'generate_song_structure',
-                musicalStyle,
-                structure,  # Pass the RAG-generated structure
-                songTheme,
-                mood,
-                language
-            )
-            self.streaming_thread.chunk_ready.connect(
-                self.update_structure_streaming)
-            self.streaming_thread.stream_complete.connect(
-                self.on_stream_complete)
-            self.streaming_thread.start()
-
-        except Exception as e:
-            QMessageBox.critical(
-                self,
-                "Structure Generation Error",
-                f"Failed to generate song structure: {str(e)}"
-            )
-
-    def generer_chord_progression(self):
-        # Récupérer les informations nécessaires
-        musicalStyle = self.text_fields[0].text()
-        songTheme = self.text_fields[1].text()
-        mood = self.text_fields[2].text()
-        language = self.text_fields[3].text()
-
-        # Vérifier que les champs ne sont pas vides
-        if not musicalStyle or not songTheme or not mood or not language:
-            QMessageBox.warning(
-                self, "Erreur", "Veuillez remplir tous les champs nécessaires")
-            return
-
-        # Réinitialiser le champ de chords
-        self.chords_field.clear()
-
-        # Arrêter tout thread de streaming précédent
-        if self.streaming_thread and self.streaming_thread.isRunning():
-            self.streaming_thread.terminate()
-
-        # Créer et lancer un nouveau thread de streaming
-        self.streaming_thread = StreamThread(
-            'generate_chord_progression', musicalStyle, songTheme, mood, language)
-        self.streaming_thread.chunk_ready.connect(self.update_chords_streaming)
-        self.streaming_thread.stream_complete.connect(self.on_stream_complete)
-        self.streaming_thread.start()
+        
+        return musicalStyle, songTheme, mood, language
+    
 
     def generer_full_composition(self):
         """Generate full composition with improved RAG integration"""
-        # Get necessary information
-        musicalStyle = self.text_fields[0].text()
-        songTheme = self.text_fields[1].text()
-        mood = self.text_fields[2].text()
-        language = self.text_fields[3].text()
+        # Récupérer les informations nécessaires
+        musicalStyle, songTheme, mood, language = self.get_song_info()
 
         # Validate inputs
         if not all([musicalStyle, songTheme, mood, language]):
             QMessageBox.warning(
-                self, "Error", "Please fill in all required fields")
+                self, "Error", "Please fill in all empty fields")
             return
 
         try:
@@ -419,35 +210,6 @@ class ModernInterface(QWidget):
             self.full_composition_field.verticalScrollBar().maximum()
         )
 
-    def update_lyrics_streaming(self, chunk):
-        # Ajouter le nouveau morceau au texte existant
-        current_text = self.lyrics_field.toPlainText()
-        self.lyrics_field.setText(current_text + chunk)
-
-        # Faire défiler automatiquement vers le bas
-        self.lyrics_field.verticalScrollBar().setValue(
-            self.lyrics_field.verticalScrollBar().maximum()
-        )
-
-    def update_structure_streaming(self, chunk):
-        # Ajouter le nouveau morceau au texte existant
-        current_text = self.structure_field.toPlainText()
-        self.structure_field.setText(current_text + chunk)
-
-        # Faire défiler automatiquement vers le bas
-        self.structure_field.verticalScrollBar().setValue(
-            self.structure_field.verticalScrollBar().maximum()
-        )
-
-    def update_chords_streaming(self, chunk):
-        # Ajouter le nouveau morceau au texte existant
-        current_text = self.chords_field.toPlainText()
-        self.chords_field.setText(current_text + chunk)
-
-        # Faire défiler automatiquement vers le bas
-        self.chords_field.verticalScrollBar().setValue(
-            self.chords_field.verticalScrollBar().maximum()
-        )
 
     def on_stream_complete(self):
         # Vous pouvez ajouter un traitement supplémentaire une fois le streaming terminé
@@ -456,105 +218,43 @@ class ModernInterface(QWidget):
     def toggle_theme(self):
         self.dark_mode = not self.dark_mode
         if self.dark_mode:
-            self.apply_dark_theme()
+            apply_dark_theme(self)
         else:
-            self.apply_light_theme()
+            apply_light_theme(self)
 
-    def apply_dark_theme(self):
-        # Mode sombre personnalisé
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #2C3E50;
-                color: #ECF0F1;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                font-size: 14px;
-            }
-            QLabel { color: #ECF0F1; }
-            QLineEdit, QComboBox, QTextEdit {
-                background-color: #34495E;
-                color: #ECF0F1;
-                border: 1px solid #2C3E50;
-                padding: 10px;
-                border-radius: 8px;
-            }
-            QPushButton {
-                background-color: #3498DB;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 8px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #2980B9;
-            }
-            QCheckBox { color: #ECF0F1; }
-        """)
-        self.bouton_mode.setText('☀️ Mode Clair')
+    # def valider(self):
+    #     # Validation des champs
+    #     erreurs = []
 
-    def apply_light_theme(self):
-        # Mode clair personnalisé
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #F5F5F5;
-                color: #333;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                font-size: 14px;
-            }
-            QLabel { color: #333; }
-            QLineEdit, QComboBox, QTextEdit {
-                background-color: white;
-                color: #333;
-                border: 1px solid #ccc;
-                padding: 10px;
-                border-radius: 8px;
-            }
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 8px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QCheckBox { color: #333; }
-        """)
-        self.bouton_mode.setText('🌙 Mode Sombre')
+    #     if not self.checkbox.isChecked():
+    #         erreurs.append("Vous devez accepter les conditions.")
 
-    def valider(self):
-        # Validation des champs
-        erreurs = []
+    #     if self.liste_deroulante.currentIndex() == -1:
+    #         erreurs.append("Vous devez sélectionner une option.")
 
-        if not self.checkbox.isChecked():
-            erreurs.append("Vous devez accepter les conditions.")
+    #     if erreurs:
+    #         # Afficher les erreurs
+    #         msg = QMessageBox()
+    #         msg.setIcon(QMessageBox.Warning)
+    #         msg.setText("Erreurs de validation")
+    #         msg.setInformativeText("\n".join(erreurs))
+    #         msg.setWindowTitle("Validation")
+    #         msg.exec_()
+    #     else:
+    #         # Récupérer les valeurs
+    #         resultats = {
+    #             'Conditions': self.checkbox.isChecked(),
+    #             'Option': self.liste_deroulante.currentText()
+    #         }
 
-        if self.liste_deroulante.currentIndex() == -1:
-            erreurs.append("Vous devez sélectionner une option.")
-
-        if erreurs:
-            # Afficher les erreurs
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setText("Erreurs de validation")
-            msg.setInformativeText("\n".join(erreurs))
-            msg.setWindowTitle("Validation")
-            msg.exec_()
-        else:
-            # Récupérer les valeurs
-            resultats = {
-                'Conditions': self.checkbox.isChecked(),
-                'Option': self.liste_deroulante.currentText()
-            }
-
-            # Afficher un message de succès
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setText("Formulaire Validé")
-            msg.setInformativeText(
-                "\n".join([f"{k}: {v}" for k, v in resultats.items()]))
-            msg.setWindowTitle("Succès")
-            msg.exec_()
+    #         # Afficher un message de succès
+    #         msg = QMessageBox()
+    #         msg.setIcon(QMessageBox.Information)
+    #         msg.setText("Formulaire Validé")
+    #         msg.setInformativeText(
+    #             "\n".join([f"{k}: {v}" for k, v in resultats.items()]))
+    #         msg.setWindowTitle("Succès")
+    #         msg.exec_()
 
     def generate_audio(self):
         """Generate audio in a separate thread"""

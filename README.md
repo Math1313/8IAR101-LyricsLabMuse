@@ -64,7 +64,7 @@ pip install audiocraft -->
 8IAR101-LyricsLabMuse/
 ├── .env
 ├── .venv
-├── docs/
+├── docs
 ├── ragData/
 │   └── commonMusicGenreStructure.pdf
 ├── src/
@@ -76,16 +76,12 @@ pip install audiocraft -->
 │   │   └── rag_helper.py
 │   ├── gui/
 │   │   ├── components/
-│   │   │   └── ui/
-│   │   │       ├── __init__.py
-│   │   │       └── audio_controls.py
-│   │   ├── __init__.py
+│   │   │   └── audio_controls.py
+│   │   │   └── audio_threads.py
+│   │   │   └── stream_thread.py
+│   │   │   └── themes.py
 │   │   └── LyricsLabMuse.py
-│   ├── services/
-│   └── utils/
-├── .env
 ├── .gitignore
-├── project_structure.md
 ├── README.md
 └── requirements.txt
 ```
