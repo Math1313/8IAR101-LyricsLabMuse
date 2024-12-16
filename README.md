@@ -74,18 +74,13 @@ py src/core/create_rag_data.py
 ```
 
 [//]: # (TODO)
-## TODO
-### Problème avec le output (chords/lyrics/melody) -> on a plustot une analyse de la chanson
-### Implémenter le output audiogen
-### FIX PROMPT TEMPLATE dans rag_helper:
-Give answer based only on the following context: {context}
-What is the {music_style} Music Typical Structure?
-I want to know the number of verse, chorus, and bridge in a typical {music_style} music.
-Do a list that looks like this:
-Intro - Verse - Chorus - Verse - etc...
-I just want the list.
-### FILTRAGE VULGAIRE
-### audio_generation.json: modif URL & api key
+## Issues
+- [ ] Problème avec le output chords/lyrics/melody -> on a plutôt une analyse de la chanson
+- [x] Fix PROMPT_TEMPLATE rag_helper
+## Improvements
+- [ ] Implémenter le output audiogen
+- [ ] Filtrage vulgaire
+- [ ] Créer une procédure pour rendre le projet exécutable (.exe)
 
 
 
