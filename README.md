@@ -1,5 +1,32 @@
 # LyricsLabMuse
 
+## Project Structure
+```bash
+8IAR101-LyricsLabMuse/
+├── .env
+├── .venv
+├── docs
+├── ragData/
+│   └── commonMusicGenreStructure.pdf
+├── src/
+│   ├── core/
+│   │   ├── audiocraft_generator.py
+│   │   ├── create_rag_data.py
+│   │   ├── music_composition_experts.py
+│   │   ├── music_composition_export_formatter.py
+│   │   └── rag_helper.py
+│   ├── gui/
+│   │   ├── components/
+│   │   │   └── audio_controls.py
+│   │   │   └── audio_threads.py
+│   │   │   └── stream_thread.py
+│   │   │   └── themes.py
+├── .gitignore
+├── README.md
+├── LyricsLabMuse.py
+└── requirements.txt
+```
+
 ## Get started
 ### 1. Clone the repository
 ```bash
@@ -46,34 +73,7 @@ MODEL_URL=http://localhost:1234/v1
 ``` bash
 py src/core/create_rag_data.py
 ```
-## Project Structure
-```bash
-8IAR101-LyricsLabMuse/
-├── .env
-├── .venv
-├── docs
-├── ragData/
-│   └── commonMusicGenreStructure.pdf
-├── src/
-│   ├── core/
-│   │   ├── audiocraft_generator.py
-│   │   ├── create_rag_data.py
-│   │   ├── music_composition_experts.py
-│   │   ├── music_composition_export_formatter.py
-│   │   └── rag_helper.py
-│   ├── gui/
-│   │   ├── components/
-│   │   │   └── audio_controls.py
-│   │   │   └── audio_threads.py
-│   │   │   └── stream_thread.py
-│   │   │   └── themes.py
-├── .gitignore
-├── README.md
-├── LyricsLabMuse.py
-└── requirements.txt
-```
 
-[//]: # (TODO)
 ## Issues
 - [ ] Problème avec le output chords/lyrics/melody -> on a plutôt une analyse de la chanson
 - [x] Fix PROMPT_TEMPLATE rag_helper
