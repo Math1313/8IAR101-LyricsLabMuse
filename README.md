@@ -4,8 +4,10 @@
 ```bash
 8IAR101-LyricsLabMuse/
 ├── .env
-├── .venv
-├── docs
+├── .venv/
+├── chroma/
+├── docs/
+├── output/
 ├── ragData/
 │   └── commonMusicGenreStructure.pdf
 ├── src/
@@ -14,6 +16,7 @@
 │   │   ├── create_rag_data.py
 │   │   ├── music_composition_experts.py
 │   │   ├── music_composition_export_formatter.py
+│   │   └── obscene_filter.py
 │   │   └── rag_helper.py
 │   ├── gui/
 │   │   ├── components/
