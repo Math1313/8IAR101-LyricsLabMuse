@@ -65,7 +65,7 @@ pip install -r requirements.txt
 - Create a `.env` file in the root directory
 - Add the following variables
 ```bash
-MODEL_URL=http://localhost:1234/v1
+MODEL_URL="http://localhost:1234/v1"
 ```
 - You can specify the URL you want. In this case, we use localhost as the model is running locally.
 
