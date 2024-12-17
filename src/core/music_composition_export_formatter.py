@@ -25,8 +25,17 @@ class MusicCompositionExportFormatter:
         }
 
     def parse_composition(self, composition_text: str) -> Dict[str, Any]:
-        """Parse the full composition text into a structured format."""
+        """
+        Parse the full composition text into a structured format.
+
+        Args:
+            composition_text (str): Raw composition text to parse
+
+        Returns:
+            Dict[str, Any]: Structured composition data
+        """
         try:
+            # Split into sections
             sections = self._parse_composition_sections(composition_text)
 
             # Extract and validate metadata
@@ -34,17 +43,15 @@ class MusicCompositionExportFormatter:
             if not metadata:
                 raise ValueError("No valid metadata found in composition")
 
-            # Extract and validate musical parameters
+            # Build the composition structure
+            composition_data = {
+                "metadata": metadata
+            }
+
+            # Extract musical parameters
             musical_params = self._extract_musical_parameters(
                 sections.get("MUSICAL PARAMETERS", "")
             )
-
-            # Build the composition structure
-            composition_data = {}
-
-            # Only add metadata if it exists
-            if metadata:
-                composition_data["metadata"] = metadata
 
             # Add music_metadata if required fields exist
             if all(key in metadata for key in ["style", "mood"]) and musical_params:
@@ -53,47 +60,38 @@ class MusicCompositionExportFormatter:
                     "mood": metadata["mood"],
                     "tempo_bpm": musical_params.get("tempo", self.default_parameters["tempo"]),
                     "primary_key": musical_params.get("key", self.default_parameters["key"]),
-                    "time_signature": musical_params.get("time_signature", self.default_parameters["time_signature"]),
+                    "time_signature": musical_params.get("time_signature",
+                                                         self.default_parameters["time_signature"]),
                     "genre_specific_feel": musical_params.get("genre_specific_feel",
                                                               self.default_parameters["genre_specific_feel"])
                 }
 
-            # Process main composition sections
-            composition_content = {}
-
-            # Add title if it exists
-            if "title" in metadata:
-                composition_content["title"] = metadata["title"]
-
-            # Process and add other sections only if they contain data
+            # Extract main composition content
             lyrics = self._clean_lyrics(sections.get("LYRICS", ""))
-            if lyrics:
-                composition_content["lyrics"] = lyrics
-
-            chord_progression = self._process_chord_progression(sections.get("CHORD PROGRESSION", ""))
-            if chord_progression:
-                composition_content["chord_progression"] = chord_progression
-
+            chord_progression = self._process_chord_progression(
+                sections.get("CHORD PROGRESSION", ""))
             melody = self._extract_melody_data(sections.get("MELODY", ""))
-            if melody:
-                composition_content["melody"] = melody
+            structure = self._parse_song_structure(
+                sections.get("COMPLETE SONG STRUCTURE", ""))
 
-            structure = self._parse_song_structure(sections.get("COMPLETE SONG STRUCTURE", ""))
-            if structure and (structure.get("technical_parameters") or structure.get("sections")):
-                composition_content["structure"] = structure
+            # Add composition content
+            composition_data.update({
+                "lyrics": lyrics if lyrics else {},
+                "chord_progression": chord_progression if chord_progression else {},
+                "melody": melody if melody else {},
+                "full_structure": structure if structure else {},
+            })
 
-            if composition_content:
-                composition_data["composition"] = composition_content
-
-            # Add technical parameters if they exist and aren't empty
+            # Add technical parameters if they exist
             if musical_params:
                 composition_data["technical_parameters"] = musical_params
-            composition_data["lyrics"] = "test"
-            composition_data["chord_progression"] = "test"
-            composition_data["full_structure"] = "test"
-            print(musical_params)
-            print(composition_content)
-            # print(composition_data)
+
+                # composition_data["lyrics"] = "test"
+                # composition_data["chord_progression"] = "test"
+                # composition_data["full_structure"] = "test"
+                print(musical_params)
+                print(composition_data)
+
             return composition_data
 
         except Exception as e:
@@ -126,14 +124,7 @@ class MusicCompositionExportFormatter:
         return sections
 
     def _parse_song_structure(self, structure_text: str) -> Dict[str, Any]:
-        """Parse the complete song structure.
-
-        Args:
-            structure_text (str): Raw structure text
-
-        Returns:
-            Dict[str, Any]: Structured song data with only populated sections
-        """
+        """Parse the complete song structure."""
         structure = {
             'technical_parameters': {},
             'sections': []
@@ -147,36 +138,37 @@ class MusicCompositionExportFormatter:
 
             if line.startswith('[Song Technical Parameters]'):
                 current_section = 'technical_parameters'
-                section_content = {}
             elif line.startswith('[') and ']' in line:
-                # If we have a previous section with content, add it
+                # Save previous section content
                 if section_content:
                     structure['sections'].append(section_content)
 
+                # Start new section
                 section_name = line.strip('[]')
                 section_content = {'name': section_name}
             elif current_section == 'technical_parameters' and ':' in line:
                 key, value = line.split(':', 1)
                 value = value.strip()
-                if value:  # Only add non-empty values
+                if value:
                     structure['technical_parameters'][key.strip()] = value
             elif ':' in line:
-                content_type = line.split(':', 1)[0].lower().strip()
-                if content_type in ['lyrics', 'chords', 'melody']:
-                    # Look ahead for content after this line
+                key = line.split(':', 1)[0].lower().strip()
+                if key in ['lyrics', 'chords', 'melody']:
                     content = self._extract_section_content(structure_text, line)
-                    if content:  # Only add if we have content
-                        section_content[content_type] = content
+                    if content:
+                        section_content[key] = content
 
-        # Add the last section if it has content
+        # Add final section
         if section_content:
             structure['sections'].append(section_content)
 
-        # Clean up the structure
+        # Remove empty sections
         if not structure['technical_parameters']:
             del structure['technical_parameters']
+        if not structure['sections']:
+            del structure['sections']
 
-        return structure if structure.get('sections') or structure.get('technical_parameters') else {}
+        return structure
 
     def _extract_metadata(self, composition_text: str, sections: Dict[str, str]) -> Dict[str, str]:
         """Extract and validate all metadata fields."""
@@ -265,59 +257,83 @@ class MusicCompositionExportFormatter:
         for line in lyrics_text.split('\n'):
             line = line.strip()
             if line.startswith('[') and ']' in line:
+                # Save previous section if exists
                 if current_section and current_lines:
-                    content = '\n'.join(current_lines)
-                    if content:  # Only add section if it has content
+                    content = '\n'.join(current_lines).strip()
+                    if content:  # Only add non-empty sections
                         sections[current_section] = content
+                    current_lines = []
+                # Extract new section name
                 current_section = line.strip('[]').split('[')[0].strip()
-                current_lines = []
             elif line and not line.startswith('(') and ':' not in line:
                 current_lines.append(line)
 
         # Handle last section
         if current_section and current_lines:
-            content = '\n'.join(current_lines)
-            if content:  # Only add section if it has content
+            content = '\n'.join(current_lines).strip()
+            if content:
                 sections[current_section] = content
 
-        return sections if sections else {}
+        return sections
 
     def _process_chord_progression(self, chord_text: str) -> Dict[str, Any]:
         """Process and structure chord progressions."""
-        sections: Dict[str, Dict[str, Any]] = {}
+        sections = {}
         current_section = None
+        current_content = {
+            'progression': [],
+            'time_signature': None,
+            'rhythm': []
+        }
 
         for line in chord_text.split('\n'):
             line = line.strip()
-            if line.startswith('**') and not line.startswith('**Production'):
-                current_section = line.strip('*').strip()
-                sections[current_section] = {
+
+            # Handle section headers
+            if line.startswith('[') and ']' in line:
+                # Save previous section if exists
+                if current_section and any(current_content.values()):
+                    sections[current_section] = {
+                        k: v for k, v in current_content.items()
+                        if v and (not isinstance(v, list) or len(v) > 0)
+                    }
+
+                # Start new section
+                current_section = line.strip('[]').split('[')[0].strip()
+                current_content = {
                     'progression': [],
                     'time_signature': None,
                     'rhythm': []
                 }
-            elif current_section:
-                if '[' in line and ']' in line:
-                    time_sig = line.strip('[]').strip()
-                    if time_sig:
-                        sections[current_section]['time_signature'] = time_sig
-                elif '-' in line and ('Major' in line or 'Minor' in line):
-                    chords = [c.strip() for c in line.split('-') if c.strip()]
-                    if chords:
-                        sections[current_section]['progression'].extend(chords)
-                elif 'beat:' in line.lower():
-                    sections[current_section]['rhythm'].append(line)
 
-        # Clean up empty sections and fields
-        return {
-            section: {
-                k: v for k, v in data.items()
+                # Extract time signature if present
+                if '[' in line and ']' in line:
+                    time_sig = line.split('[')[1].split(']')[0].strip()
+                    if time_sig:
+                        current_content['time_signature'] = time_sig
+
+            # Handle chord sequences
+            elif 'Chord sequence:' in line:
+                chords = line.split(':', 1)[1].strip()
+                if chords:
+                    current_content['progression'].extend(
+                        [c.strip() for c in chords.split(',') if c.strip()]
+                    )
+
+            # Handle rhythm patterns
+            elif 'Rhythm:' in line:
+                rhythm = line.split(':', 1)[1].strip()
+                if rhythm:
+                    current_content['rhythm'].append(rhythm)
+
+        # Add final section
+        if current_section and any(current_content.values()):
+            sections[current_section] = {
+                k: v for k, v in current_content.items()
                 if v and (not isinstance(v, list) or len(v) > 0)
             }
-            for section, data in sections.items()
-            if any(v and (not isinstance(v, list) or len(v) > 0)
-                   for v in data.values())
-        }
+
+        return sections
 
     def _extract_melody_data(self, melody_text: str) -> Dict[str, Any]:
         """Extract and structure melody information."""
@@ -376,17 +392,24 @@ class MusicCompositionExportFormatter:
             logger.error(f"Failed to export to TXT: {str(e)}")
             raise
 
-    def generate_audio_export_metadata(self, lyrics: str, chord_progression: str,
-                                       song_structure: str, musical_style: str,
+    def generate_audio_export_metadata(self, lyrics: Dict[str, Any], chord_progression: Dict[str, Any],
+                                       song_structure: Dict[str, Any], musical_style: str,
                                        mood: str) -> Dict[str, Any]:
         """
-        Generate metadata for audio generation, maintaining backward compatibility.
+        Generate metadata for audio generation, handling dictionary inputs properly.
+
+        Args:
+            lyrics (Dict[str, Any]): Dictionary containing lyrics sections
+            chord_progression (Dict[str, Any]): Dictionary containing chord progression data
+            song_structure (Dict[str, Any]): Dictionary containing song structure data
+            musical_style (str): Style of the music
+            mood (str): Mood of the song
+
+        Returns:
+            Dict[str, Any]: Formatted metadata for audio generation
         """
         try:
-            # Parse the song structure for technical parameters
-            params = self._extract_musical_parameters(song_structure)
-
-            # Build the metadata structure with only populated fields
+            # Build the base metadata structure
             metadata = {
                 "metadata": {
                     "style": musical_style,
@@ -394,48 +417,69 @@ class MusicCompositionExportFormatter:
                 }
             }
 
-            # Add music metadata if we have valid parameters
+            # Add music metadata with default values
             music_metadata = {
                 "musical_style": musical_style,
-                "mood": mood
+                "mood": mood,
+                "tempo_bpm": "120",  # Default tempo
+                "primary_key": "C major",  # Default key
+                "time_signature": "4/4",  # Default time signature
+                "genre_specific_feel": "standard"  # Default feel
             }
 
-            # Only add parameters that exist
-            if params.get("tempo"):
-                music_metadata["tempo_bpm"] = params["tempo"]
-            if params.get("key"):
-                music_metadata["primary_key"] = params["key"]
-            if params.get("time_signature"):
-                music_metadata["time_signature"] = params["time_signature"]
-            if params.get("genre_specific_feel"):
-                music_metadata["genre_specific_feel"] = params["genre_specific_feel"]
+            # Extract and add technical parameters if available
+            if song_structure and 'technical_parameters' in song_structure:
+                tech_params = song_structure['technical_parameters']
+                for param_name, param_value in tech_params.items():
+                    param_name_lower = param_name.lower()
+                    if 'tempo' in param_name_lower:
+                        # Extract just the number from tempo
+                        tempo_value = ''.join(filter(str.isdigit, param_value))
+                        if tempo_value:
+                            music_metadata["tempo_bpm"] = tempo_value
+                    elif 'key' in param_name_lower:
+                        music_metadata["primary_key"] = param_value
+                    elif 'time signature' in param_name_lower:
+                        music_metadata["time_signature"] = param_value
+                    elif 'feel' in param_name_lower:
+                        music_metadata["genre_specific_feel"] = param_value
 
             metadata["music_metadata"] = music_metadata
 
-            # Process structure and add only if valid
-            structure = self._parse_song_structure(song_structure)
-            if structure:
-                metadata["musical_structure"] = dict(song_structure=structure)
-                # metadata["musical_structure"] = {
-                #     "song_structure": structure
-                # }
+            # Process song structure
+            if song_structure and 'sections' in song_structure:
+                metadata["musical_structure"] = {
+                    "song_structure": {
+                        "sections": song_structure['sections']
+                    }
+                }
 
-            # Process chord progression and add if valid
-            chords = self._process_chord_progression(chord_progression)
-            if chords:
+            # Process chord progression
+            if chord_progression:
+                chord_text = ""
+                for section, data in chord_progression.items():
+                    chord_text += f"[{section}]\n"
+                    if 'progression' in data:
+                        chord_text += f"Chord sequence: {', '.join(data['progression'])}\n"
+                    if 'time_signature' in data:
+                        chord_text += f"Time signature: {data['time_signature']}\n"
+                    if 'rhythm' in data:
+                        chord_text += f"Rhythm: {', '.join(data['rhythm'])}\n"
+
                 if "musical_structure" not in metadata:
                     metadata["musical_structure"] = {}
-                metadata["musical_structure"]["chord_progression"] = chords
+                metadata["musical_structure"]["chord_progression"] = {"raw_progression": chord_text}
 
-            # Process lyrics and add if valid
-            clean_lyrics = self._clean_lyrics(lyrics)
-            if clean_lyrics:
-                metadata["lyrics_data"] = clean_lyrics
+            # Process lyrics
+            if lyrics:
+                lyrics_text = ""
+                for section, content in lyrics.items():
+                    lyrics_text += f"[{section}]\n{content}\n\n"
 
-            # Process melody data if present in structure
-            melody = self._extract_melody_data(song_structure)
-            if melody:
-                metadata["melody_data"] = melody
+                metadata["lyrics_data"] = lyrics_text.strip()
+
+            # Log the final metadata for debugging
+            logging.debug(f"Generated audio metadata: {metadata}")
 
             return metadata
 

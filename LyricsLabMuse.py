@@ -253,9 +253,8 @@ class ModernInterface(QWidget):
         else:
             apply_light_theme(self)
 
-
     def generate_audio(self):
-        """Generate audio in a separate thread"""
+        """Generate audio in a separate thread with proper error handling and data processing"""
         try:
             # Get input fields and validate
             musical_style = self.text_fields[0].currentText()
@@ -275,36 +274,45 @@ class ModernInterface(QWidget):
             self.progress.setAutoReset(True)
             self.progress.setMinimumDuration(0)  # Show immediately
             self.progress.setValue(0)
-
-            # Make the progress dialog wider
             self.progress.setMinimumWidth(300)
 
-            # Get and validate composition data
+            # Get composition text and validate
             composition_text = self.full_composition_field.toPlainText()
             if not composition_text:
                 QMessageBox.warning(
                     self, "Error", "Please generate composition first")
                 return
 
-            # Parse and format data
-            formatter = MusicCompositionExportFormatter()
-            parsed_data = formatter.parse_composition(composition_text)
-            print(parsed_data)
-            formatted_data = formatter.generate_audio_export_metadata(
-                lyrics=parsed_data['lyrics'],
-                chord_progression=parsed_data['chord_progression'],
-                song_structure=parsed_data['full_structure'],
-                musical_style=musical_style,
-                mood=mood
-            )
+            try:
+                # Parse and format data
+                formatter = MusicCompositionExportFormatter()
+                parsed_data = formatter.parse_composition(composition_text)
 
-            # Update musical parameters
-            if 'music_metadata' not in formatted_data:
-                formatted_data['music_metadata'] = {}
-            formatted_data['music_metadata'].update({
-                'tempo_bpm': parsed_data.get('musical_parameters', {}).get('Tempo', '120').split()[0],
-                'primary_key': parsed_data.get('musical_parameters', {}).get('Key', 'C'),
-            })
+                # Log parsed data for debugging
+                logging.debug(f"Parsed composition data: {parsed_data}")
+                print(parsed_data)
+                # Generate audio export metadata
+                formatted_data = formatter.generate_audio_export_metadata(
+                    lyrics=parsed_data.get('lyrics', {}),
+                    chord_progression=parsed_data.get('chord_progression', {}),
+                    song_structure=parsed_data.get('full_structure', {}),
+                    musical_style=musical_style,
+                    mood=mood
+                )
+
+                # Log formatted data for debugging
+                logging.debug(f"Formatted audio metadata: {formatted_data}")
+
+                # Validate formatted data structure
+                if not formatted_data.get('music_metadata'):
+                    raise ValueError("Missing required music metadata")
+
+            except Exception as e:
+                logging.error(f"Data formatting error: {str(e)}")
+                QMessageBox.critical(
+                    self, "Formatting Error",
+                    f"Failed to process composition data: {str(e)}")
+                return
 
             # Create and configure audio generation thread
             self.audio_thread = AudioGenerationThread(
@@ -327,9 +335,11 @@ class ModernInterface(QWidget):
         except ValueError as e:
             QMessageBox.warning(self, "Input Error", str(e))
         except Exception as e:
-            QMessageBox.critical(self, "Audio Generation Error",
-                                 f"Failed to generate audio: {str(e)}")
             logging.error(f"Audio generation error: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Audio Generation Error",
+                f"Failed to generate audio: {str(e)}")
 
     def update_generation_progress(self, percent, message):
         """Update progress dialog"""
