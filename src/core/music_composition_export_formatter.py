@@ -88,7 +88,12 @@ class MusicCompositionExportFormatter:
             # Add technical parameters if they exist and aren't empty
             if musical_params:
                 composition_data["technical_parameters"] = musical_params
-
+            composition_data["lyrics"] = "test"
+            composition_data["chord_progression"] = "test"
+            composition_data["full_structure"] = "test"
+            print(musical_params)
+            print(composition_content)
+            # print(composition_data)
             return composition_data
 
         except Exception as e:
