@@ -53,6 +53,7 @@ resources/templates/*
 !resources/templates/.gitkeep
 
 # Generated files
+*.spec
 *.log
 *.wav
 output/
