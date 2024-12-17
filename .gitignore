@@ -6,7 +6,6 @@ env/
 ENV/
 
 # Environment variables
-.env
 
 # Database
 chroma/
