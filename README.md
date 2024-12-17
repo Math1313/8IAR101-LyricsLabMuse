@@ -78,11 +78,11 @@ py src/core/create_rag_data.py
 ```
 
 ## Issues
-- [ ] Problème avec le output chords/lyrics/melody -> on a plutôt une analyse de la chanson
+- [x] Problème avec le output chords/lyrics/melody -> on a plutôt une analyse de la chanson
 - [x] Fix PROMPT_TEMPLATE rag_helper
 ## Improvements
 - [ ] Implémenter le output audiogen
-- [ ] Filtrage vulgaire
+- [x] Filtrage vulgaire
 - [ ] Créer une procédure pour rendre le projet exécutable (.exe)
 
 
