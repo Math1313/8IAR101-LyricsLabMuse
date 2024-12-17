@@ -287,9 +287,9 @@ class ModernInterface(QWidget):
                 return
 
             # Parse and format data
-            parsed_data = self._parse_composition_data(composition_text)
-            print(parsed_data)
             formatter = MusicCompositionExportFormatter()
+            parsed_data = formatter.parse_composition(composition_text)
+            print(parsed_data)
             formatted_data = formatter.generate_audio_export_metadata(
                 lyrics=parsed_data['lyrics'],
                 chord_progression=parsed_data['chord_progression'],

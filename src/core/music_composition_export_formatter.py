@@ -339,6 +339,7 @@ class MusicCompositionExportFormatter:
         """Export composition to JSON file."""
         try:
             formatted_data = self.parse_composition(composition_text)
+            print("export_to_json", formatted_data)
             if not formatted_data:
                 raise ValueError("No valid data to export")
 
