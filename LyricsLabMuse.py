@@ -168,16 +168,8 @@ class ModernInterface(QWidget):
             QMessageBox.warning(
                 self, "Error", "Please fill in all empty fields")
             return
-
-        # if (
-        #     self.ObsceneFilter.is_obscene(musicalStyle) or
-        #     self.ObsceneFilter.is_obscene(songTheme) or
-        #     self.ObsceneFilter.is_obscene(mood) or
-        #     self.ObsceneFilter.is_obscene(language)
-        # ):
-        #     QMessageBox.warning(
-        #         self, "Error", "Please avoid using obscene language")
-        #     return
+        
+        # Validate obscene language
         if(any(
             self.ObsceneFilter.is_obscene(item)
             for item in [musicalStyle, songTheme, mood, language]
