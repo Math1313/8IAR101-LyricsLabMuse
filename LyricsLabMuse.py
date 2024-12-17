@@ -1,11 +1,10 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QVBoxLayout, QPushButton,
-                             QFrame, QMessageBox, QTextEdit,
+                             QFrame, QMessageBox, QTextEdit,QComboBox,
                              QScrollArea, QProgressDialog, QStyle, QHBoxLayout, QFileDialog
                              )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+from PyQt5.QtCore import Qt
 import logging
-import time
 import sys
 import os
 
@@ -19,6 +18,7 @@ from src.gui.components.themes import apply_dark_theme, apply_light_theme
 from src.core.audiocraft_generator import AudiocraftGenerator
 from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
 from src.core.rag_helper import MusicStructureRAG
+from src.core.obscene_filter import ObsceneFilter
 
 class ModernInterface(QWidget):
     def __init__(self):
@@ -30,6 +30,7 @@ class ModernInterface(QWidget):
                                  f"Failed to initialize audio generator: {str(e)}")
             return
         self.rag = MusicStructureRAG()
+        self.ObsceneFilter = ObsceneFilter()
         self.dark_mode = False
         self.streaming_thread = None
         self.audio_controls = None
@@ -79,6 +80,7 @@ class ModernInterface(QWidget):
             QMessageBox.critical(
                 self, "UI Initialization Error", f"Failed to initialize UI: {str(e)}")
 
+    
     def create_title(self, layout):
         titre = QLabel('LyricsLabMuse')
         titre.setAlignment(Qt.AlignCenter)
@@ -89,13 +91,33 @@ class ModernInterface(QWidget):
         """)
         layout.addWidget(titre)
 
+
     def create_input_sections(self, layout):
         self.text_fields = []
         labels = ['Musical Style', 'Song Theme', 'Mood', 'Language']
         for label in labels:
-            section_layout, field = self.create_input_section(label)
+            if label == 'Musical Style':
+                section_layout, field = self.create_dropdown_section(label)
+            else:
+                section_layout, field = self.create_input_section(label)
             layout.addLayout(section_layout)
             self.text_fields.append(field)
+
+
+    def create_dropdown_section(self, label_text):
+        section_layout = QVBoxLayout()
+        label = QLabel(label_text)
+        label.setStyleSheet("""
+            font-weight: bold;
+            margin-bottom: 5px;
+        """)
+        dropdown = QComboBox()
+        dropdown.addItems(['Pop', 'Rock', 'Rap', 'EDM', 'Blues', 'Country', 'Jazz', 'Reggae', 'R&B'])
+
+        section_layout.addWidget(label)
+        section_layout.addWidget(dropdown)
+        return section_layout, dropdown
+    
 
     def create_input_section(self, label_text):
         section_layout = QVBoxLayout()
@@ -148,7 +170,7 @@ class ModernInterface(QWidget):
 
 
     def get_song_info(self):
-        musicalStyle = self.text_fields[0].text()
+        musicalStyle = self.text_fields[0].currentText()
         songTheme = self.text_fields[1].text()
         mood = self.text_fields[2].text()
         language = self.text_fields[3].text()
@@ -166,7 +188,16 @@ class ModernInterface(QWidget):
             QMessageBox.warning(
                 self, "Error", "Please fill in all empty fields")
             return
-
+        
+        # Validate obscene language
+        if(any(
+            self.ObsceneFilter.is_obscene(item)
+            for item in [songTheme, mood, language]
+        )):
+            QMessageBox.warning(
+                self, "Error", "Please avoid using obscene language")
+            return 
+        
         try:
             # Get structure using new RAG
             structure = self.rag.query_rag(musicalStyle)
@@ -222,45 +253,12 @@ class ModernInterface(QWidget):
         else:
             apply_light_theme(self)
 
-    # def valider(self):
-    #     # Validation des champs
-    #     erreurs = []
-
-    #     if not self.checkbox.isChecked():
-    #         erreurs.append("Vous devez accepter les conditions.")
-
-    #     if self.liste_deroulante.currentIndex() == -1:
-    #         erreurs.append("Vous devez sélectionner une option.")
-
-    #     if erreurs:
-    #         # Afficher les erreurs
-    #         msg = QMessageBox()
-    #         msg.setIcon(QMessageBox.Warning)
-    #         msg.setText("Erreurs de validation")
-    #         msg.setInformativeText("\n".join(erreurs))
-    #         msg.setWindowTitle("Validation")
-    #         msg.exec_()
-    #     else:
-    #         # Récupérer les valeurs
-    #         resultats = {
-    #             'Conditions': self.checkbox.isChecked(),
-    #             'Option': self.liste_deroulante.currentText()
-    #         }
-
-    #         # Afficher un message de succès
-    #         msg = QMessageBox()
-    #         msg.setIcon(QMessageBox.Information)
-    #         msg.setText("Formulaire Validé")
-    #         msg.setInformativeText(
-    #             "\n".join([f"{k}: {v}" for k, v in resultats.items()]))
-    #         msg.setWindowTitle("Succès")
-    #         msg.exec_()
 
     def generate_audio(self):
         """Generate audio in a separate thread"""
         try:
             # Get input fields and validate
-            musical_style = self.text_fields[0].text()
+            musical_style = self.text_fields[0].currentText()
             song_theme = self.text_fields[1].text()
             mood = self.text_fields[2].text()
             language = self.text_fields[3].text()
@@ -355,41 +353,19 @@ class ModernInterface(QWidget):
         QMessageBox.critical(self, "Generation Error",
                              f"Failed to generate audio: {error_message}")
 
-    def _extract_lyrics(self, composition_text):
-        """Extract lyrics from composition text"""
-        # Add logic to extract lyrics section from composition text
-        if "## LYRICS" in composition_text:
-            lyrics_section = composition_text.split("## LYRICS")[
-                1].split("##")[0]
-            return lyrics_section.strip()
-        return ""
-
-    def _extract_chords(self, composition_text):
-        """Extract chord progression from composition text"""
-        # Add logic to extract chord section from composition text
-        if "## CHORD PROGRESSION" in composition_text:
-            chord_section = composition_text.split(
-                "## CHORD PROGRESSION")[1].split("##")[0]
-            return chord_section.strip()
+    def _extract_section(self, composition_text, section_name):
+        """Extract a specific section from the composition text"""
+        section_marker = f"## {section_name.upper()}"
+        if section_marker in composition_text:
+            section = composition_text.split(section_marker)[1].split("##")[0]
+            return section.strip()
         return ""
 
     def _extract_lyrics(self, composition_text):
-        """Extract lyrics from composition text"""
-        # Add logic to extract lyrics section from composition text
-        if "## LYRICS" in composition_text:
-            lyrics_section = composition_text.split("## LYRICS")[
-                1].split("##")[0]
-            return lyrics_section.strip()
-        return ""
+        return self._extract_section(composition_text, "LYRICS")
 
     def _extract_chords(self, composition_text):
-        """Extract chord progression from composition text"""
-        # Add logic to extract chord section from composition text
-        if "## CHORD PROGRESSION" in composition_text:
-            chord_section = composition_text.split(
-                "## CHORD PROGRESSION")[1].split("##")[0]
-            return chord_section.strip()
-        return ""
+        return self._extract_section(composition_text, "CHORD PROGRESSION")
 
     def handle_audio_output(self, audio_path: str):
         """Handle the generated audio file"""
