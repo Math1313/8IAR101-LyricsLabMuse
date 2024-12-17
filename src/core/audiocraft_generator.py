@@ -24,7 +24,7 @@ class AudiocraftGenerator:
                 self.music_model = self.music_model.to(self.device)
 
             # Set default parameters
-            self.set_generation_params()
+            self.set_generation_params(15)
 
         except Exception as e:
             logger.error(f"Error initializing MusicGen model: {str(e)}")
