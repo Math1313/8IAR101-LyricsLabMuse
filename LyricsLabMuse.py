@@ -396,47 +396,6 @@ class ModernInterface(QWidget):
                                  f"Failed to initialize audio controls: {str(e)}")
             logging.error(f"Audio controls setup error: {str(e)}")
 
-    # def _parse_composition_data(self, composition_text: str) -> dict:
-    #     """
-    #     Parse the full composition text to extract all musical elements
-    #     """
-    #     sections = {}
-    #     current_section = None
-    #     current_content = []
-    #
-    #     # Split by sections
-    #     for line in composition_text.split('\n'):
-    #         if line.startswith('##'):
-    #             # Save previous section
-    #             if current_section and current_content:
-    #                 sections[current_section] = '\n'.join(current_content)
-    #                 current_content = []
-    #             # Start new section
-    #             current_section = line.replace('#', '').strip()
-    #         elif current_section:
-    #             current_content.append(line)
-    #
-    #     # Add final section
-    #     if current_section and current_content:
-    #         sections[current_section] = '\n'.join(current_content)
-    #
-    #     # Extract specific parameters
-    #     musical_params = {}
-    #     if "MUSICAL PARAMETERS" in sections:
-    #         params_text = sections["MUSICAL PARAMETERS"]
-    #         for line in params_text.split('\n'):
-    #             if ":" in line:
-    #                 key, value = line.split(':', 1)
-    #                 musical_params[key.strip()] = value.strip()
-    #
-    #     return {
-    #         'musical_parameters': musical_params,
-    #         'lyrics': sections.get("LYRICS", ""),
-    #         'chord_progression': sections.get("CHORD PROGRESSION", ""),
-    #         'melody': sections.get("MELODY", ""),
-    #         'full_structure': sections.get("COMPLETE SONG STRUCTURE", "")
-    #     }
-
     def create_export_buttons(self, layout):
         """Create export buttons for JSON and TXT formats"""
         export_layout = QHBoxLayout()
