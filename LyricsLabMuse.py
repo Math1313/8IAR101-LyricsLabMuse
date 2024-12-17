@@ -3,9 +3,8 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QFrame, QMessageBox, QTextEdit,QComboBox,
                              QScrollArea, QProgressDialog, QStyle, QHBoxLayout, QFileDialog
                              )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+from PyQt5.QtCore import Qt
 import logging
-import time
 import sys
 import os
 
@@ -259,7 +258,7 @@ class ModernInterface(QWidget):
         """Generate audio in a separate thread"""
         try:
             # Get input fields and validate
-            musical_style = self.text_fields[0].text()
+            musical_style = self.text_fields[0].currentText()
             song_theme = self.text_fields[1].text()
             mood = self.text_fields[2].text()
             language = self.text_fields[3].text()
@@ -354,41 +353,19 @@ class ModernInterface(QWidget):
         QMessageBox.critical(self, "Generation Error",
                              f"Failed to generate audio: {error_message}")
 
-    def _extract_lyrics(self, composition_text):
-        """Extract lyrics from composition text"""
-        # Add logic to extract lyrics section from composition text
-        if "## LYRICS" in composition_text:
-            lyrics_section = composition_text.split("## LYRICS")[
-                1].split("##")[0]
-            return lyrics_section.strip()
-        return ""
-
-    def _extract_chords(self, composition_text):
-        """Extract chord progression from composition text"""
-        # Add logic to extract chord section from composition text
-        if "## CHORD PROGRESSION" in composition_text:
-            chord_section = composition_text.split(
-                "## CHORD PROGRESSION")[1].split("##")[0]
-            return chord_section.strip()
+    def _extract_section(self, composition_text, section_name):
+        """Extract a specific section from the composition text"""
+        section_marker = f"## {section_name.upper()}"
+        if section_marker in composition_text:
+            section = composition_text.split(section_marker)[1].split("##")[0]
+            return section.strip()
         return ""
 
     def _extract_lyrics(self, composition_text):
-        """Extract lyrics from composition text"""
-        # Add logic to extract lyrics section from composition text
-        if "## LYRICS" in composition_text:
-            lyrics_section = composition_text.split("## LYRICS")[
-                1].split("##")[0]
-            return lyrics_section.strip()
-        return ""
+        return self._extract_section(composition_text, "LYRICS")
 
     def _extract_chords(self, composition_text):
-        """Extract chord progression from composition text"""
-        # Add logic to extract chord section from composition text
-        if "## CHORD PROGRESSION" in composition_text:
-            chord_section = composition_text.split(
-                "## CHORD PROGRESSION")[1].split("##")[0]
-            return chord_section.strip()
-        return ""
+        return self._extract_section(composition_text, "CHORD PROGRESSION")
 
     def handle_audio_output(self, audio_path: str):
         """Handle the generated audio file"""
