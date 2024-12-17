@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QVBoxLayout, QPushButton,
-                             QFrame, QMessageBox, QTextEdit,
+                             QFrame, QMessageBox, QTextEdit,QComboBox,
                              QScrollArea, QProgressDialog, QStyle, QHBoxLayout, QFileDialog
                              )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
@@ -81,6 +81,7 @@ class ModernInterface(QWidget):
             QMessageBox.critical(
                 self, "UI Initialization Error", f"Failed to initialize UI: {str(e)}")
 
+    
     def create_title(self, layout):
         titre = QLabel('LyricsLabMuse')
         titre.setAlignment(Qt.AlignCenter)
@@ -91,13 +92,33 @@ class ModernInterface(QWidget):
         """)
         layout.addWidget(titre)
 
+
     def create_input_sections(self, layout):
         self.text_fields = []
         labels = ['Musical Style', 'Song Theme', 'Mood', 'Language']
         for label in labels:
-            section_layout, field = self.create_input_section(label)
+            if label == 'Musical Style':
+                section_layout, field = self.create_dropdown_section(label)
+            else:
+                section_layout, field = self.create_input_section(label)
             layout.addLayout(section_layout)
             self.text_fields.append(field)
+
+
+    def create_dropdown_section(self, label_text):
+        section_layout = QVBoxLayout()
+        label = QLabel(label_text)
+        label.setStyleSheet("""
+            font-weight: bold;
+            margin-bottom: 5px;
+        """)
+        dropdown = QComboBox()
+        dropdown.addItems(['Pop', 'Rock', 'Rap', 'EDM', 'Blues', 'Country', 'Jazz', 'Reggae', 'R&B'])
+
+        section_layout.addWidget(label)
+        section_layout.addWidget(dropdown)
+        return section_layout, dropdown
+    
 
     def create_input_section(self, label_text):
         section_layout = QVBoxLayout()
@@ -150,7 +171,7 @@ class ModernInterface(QWidget):
 
 
     def get_song_info(self):
-        musicalStyle = self.text_fields[0].text()
+        musicalStyle = self.text_fields[0].currentText()
         songTheme = self.text_fields[1].text()
         mood = self.text_fields[2].text()
         language = self.text_fields[3].text()
@@ -172,7 +193,7 @@ class ModernInterface(QWidget):
         # Validate obscene language
         if(any(
             self.ObsceneFilter.is_obscene(item)
-            for item in [musicalStyle, songTheme, mood, language]
+            for item in [songTheme, mood, language]
         )):
             QMessageBox.warning(
                 self, "Error", "Please avoid using obscene language")
@@ -233,39 +254,6 @@ class ModernInterface(QWidget):
         else:
             apply_light_theme(self)
 
-    # def valider(self):
-    #     # Validation des champs
-    #     erreurs = []
-
-    #     if not self.checkbox.isChecked():
-    #         erreurs.append("Vous devez accepter les conditions.")
-
-    #     if self.liste_deroulante.currentIndex() == -1:
-    #         erreurs.append("Vous devez sélectionner une option.")
-
-    #     if erreurs:
-    #         # Afficher les erreurs
-    #         msg = QMessageBox()
-    #         msg.setIcon(QMessageBox.Warning)
-    #         msg.setText("Erreurs de validation")
-    #         msg.setInformativeText("\n".join(erreurs))
-    #         msg.setWindowTitle("Validation")
-    #         msg.exec_()
-    #     else:
-    #         # Récupérer les valeurs
-    #         resultats = {
-    #             'Conditions': self.checkbox.isChecked(),
-    #             'Option': self.liste_deroulante.currentText()
-    #         }
-
-    #         # Afficher un message de succès
-    #         msg = QMessageBox()
-    #         msg.setIcon(QMessageBox.Information)
-    #         msg.setText("Formulaire Validé")
-    #         msg.setInformativeText(
-    #             "\n".join([f"{k}: {v}" for k, v in resultats.items()]))
-    #         msg.setWindowTitle("Succès")
-    #         msg.exec_()
 
     def generate_audio(self):
         """Generate audio in a separate thread"""
