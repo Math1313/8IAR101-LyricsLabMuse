@@ -11,7 +11,10 @@ class MusicCompositionExperts:
 
     def __init__(self):
         self.llm = ChatOpenAI(
-            temperature=0.3,
+            # pour test
+            temperature=0.01,
+            # pour projet
+            # temperature=0.3,
             base_url=os.getenv('MODEL_URL'),
             api_key="not-needed",
             streaming=True
@@ -68,20 +71,6 @@ class MusicCompositionExperts:
         {structure}
 
         Format with section labels and exact line counts in brackets:
-        [Verse 1] [8 lines]
-        (write verse)
-
-        [Chorus] [4-6 lines]
-        (write chorus)
-
-        [Verse 2] [8 lines]
-        (write verse)
-
-        [Bridge] (optional) [4 lines max]
-        (write bridge if appropriate)
-
-        [Final Chorus]
-        (same as first chorus)
 
         Show ONLY the lyrics for each section. Do not include any other content.
         """
