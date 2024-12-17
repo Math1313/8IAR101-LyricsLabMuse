@@ -1,428 +1,438 @@
 # src/core/music_composition_export_formatter.py
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
 class MusicCompositionExportFormatter:
+    """
+    A comprehensive formatter for music composition data that handles:
+    - JSON and TXT export
+    - Audio generation metadata formatting
+    - Parsing of composition sections
+    - Cleaning and structuring of musical data
+    """
+
     def __init__(self):
-        self.musical_key_mappings = {
-            'Major Keys': {
-                'C': ['C', 'E', 'G'],
-                'G': ['G', 'B', 'D'],
-                'D': ['D', 'F#', 'A'],
-                'A': ['A', 'C#', 'E'],
-                'E': ['E', 'G#', 'B']
-            },
-            'Minor Keys': {
-                'Am': ['A', 'C', 'E'],
-                'Em': ['E', 'G', 'B'],
-                'Dm': ['D', 'F', 'A']
-            }
+        self.default_parameters = {
+            "tempo": "120",
+            "key": "C major",
+            "time_signature": "4/4",
+            "genre_specific_feel": "standard"
         }
 
-    def generate_audio_export_metadata(self, lyrics: str, chord_progression: str, song_structure: str,
-                                       musical_style: str, mood: str) -> dict:
-        """
-        Format composition data for audio generation.
-
-        Args:
-            lyrics (str): Full lyrics text
-            chord_progression (str): Chord progression text
-            song_structure (str): Complete song structure text
-            musical_style (str): Style of music
-            mood (str): Mood of the song
-
-        Returns:
-            dict: Formatted metadata for audio generation
-        """
+    def parse_composition(self, composition_text: str) -> Dict[str, Any]:
+        """Parse the full composition text into a structured format."""
         try:
-            # Extract musical parameters from song structure with safer parsing
-            musical_params = {}
-            if "[Song Technical Parameters]" in song_structure:
-                try:
-                    params_section = song_structure.split("[Song Technical Parameters]")[1]
-                    # Find the end of the parameters section (next section or end of text)
-                    if "[" in params_section:
-                        params_section = params_section.split("[")[0]
-
-                    for line in params_section.split('\n'):
-                        if ":" in line:
-                            key, value = line.split(":", 1)
-                            musical_params[key.strip()] = value.strip()
-                except Exception as e:
-                    logger.warning(f"Error parsing musical parameters: {str(e)}")
-
-            # Safely get tempo with fallback
-            try:
-                tempo_str = musical_params.get("Tempo", "120 BPM")
-                tempo = "".join(filter(str.isdigit, tempo_str)) or "120"
-            except Exception:
-                tempo = "120"
-
-            # Safely get key with fallback
-            try:
-                primary_key = musical_params.get("Key", self._determine_primary_key(chord_progression))
-                if not primary_key or primary_key.isspace():
-                    primary_key = "C major"
-            except Exception:
-                primary_key = "C major"
-
-            # Parse chord progression safely
-            try:
-                chord_data = self._process_chord_progression(chord_progression)
-            except Exception as e:
-                logger.warning(f"Error processing chord progression: {str(e)}")
-                chord_data = {"default": {"raw_progression": ""}}
-
-            # Structure the output
-            return {
-                "metadata": {
-                    "style": musical_style,
-                    "mood": mood,
-                    "theme": "Generated composition"
-                },
-                "music_metadata": {
-                    "musical_style": musical_style,
-                    "mood": mood,
-                    "tempo_bpm": tempo,
-                    "primary_key": primary_key,
-                    "time_signature": musical_params.get("Time Signature", "4/4"),
-                    "genre_specific_feel": "standard"
-                },
-                "musical_structure": {
-                    "song_structure": self._parse_song_structure(song_structure),
-                    "chord_progression": chord_data
-                },
-                "lyrics_data": self._parse_lyrics(lyrics),
-                "melody_data": self._extract_melody_data(song_structure),
-                "audio_generation_hints": {
-                    "recommended_instruments": self._suggest_instruments(musical_style),
-                    "emotional_intensity_map": self._create_emotion_intensity_map(mood)
-                }
-            }
-        except Exception as e:
-            logger.error(f"Error formatting audio metadata: {str(e)}")
-            # Return a minimal valid structure instead of raising an error
-            return {
-                "metadata": {"style": musical_style, "mood": mood},
-                "music_metadata": {
-                    "musical_style": musical_style,
-                    "mood": mood,
-                    "tempo_bpm": "120",
-                    "primary_key": "C major",
-                    "time_signature": "4/4",
-                    "genre_specific_feel": "standard"
-                },
-                "musical_structure": {
-                    "song_structure": {"sections": []},
-                    "chord_progression": {"default": {"raw_progression": ""}}
-                },
-                "lyrics_data": "",
-                "melody_data": "",
-                "audio_generation_hints": {
-                    "recommended_instruments": ["Piano"],
-                    "emotional_intensity_map": {"neutral": 0.5}
-                }
-            }
-
-    def _determine_primary_key(self, chord_progression: str) -> str:
-        """Determine the primary musical key based on chord progression"""
-        for key_type, keys in self.musical_key_mappings.items():
-            for key, chord_set in keys.items():
-                if any(chord in chord_progression for chord in chord_set):
-                    return key
-        return 'C'  # Default fallback key
-
-    def _suggest_tempo_from_style_and_mood(self, musical_style: str, mood: str) -> int:
-        """Suggest tempo based on musical style and mood"""
-        tempo_mapping = {
-            'Ballad': {'Sad': 60, 'Melancholic': 65, 'Romantic': 70},
-            'Rock': {'Energetic': 120, 'Intense': 130, 'Angry': 135},
-            'Pop': {'Happy': 100, 'Upbeat': 110, 'Neutral': 90},
-            'Jazz': {'Contemplative': 80, 'Smooth': 75, 'Relaxed': 70},
-            'Electronic': {'Intense': 128, 'Energetic': 135, 'Neutral': 110}
-        }
-        return tempo_mapping.get(musical_style, {}).get(mood, 90)
-
-    def _process_chord_progression(self, chord_progression: str) -> Dict[str, Any]:
-        """Process and structure chord progression"""
-        current_section = None
-        sections = {}
-
-        for line in chord_progression.split('\n'):
-            if line.startswith('['):
-                current_section = line.strip('[]').split()[0]
-                sections[current_section] = {'raw_progression': ''}
-            elif current_section and 'Chord sequence:' in line:
-                progression = line.split(':', 1)[1].strip()
-                sections[current_section]['raw_progression'] = progression
-                sections[current_section]['unique_chords'] = list(set(progression.split()))
-                sections[current_section]['complexity'] = self._analyze_chord_pattern(progression.split())
-
-        return sections
-
-    def _analyze_chord_pattern(self, chords: list) -> str:
-        """Analyze chord progression pattern"""
-        if len(chords) <= 3:
-            return "Simple"
-        elif len(chords) <= 6:
-            return "Moderate Complexity"
-        else:
-            return "Complex"
-
-    def _parse_song_structure(self, structure_text: str) -> dict:
-        """Parse the song structure into a structured format"""
-        sections = []
-        current_section = None
-
-        for line in structure_text.split('\n'):
-            if line.startswith('[') and ']' in line and not "Technical Parameters" in line:
-                section_name = line.strip('[]')
-                current_section = {
-                    "name": section_name,
-                    "type": section_name.split()[0].lower(),
-                    "lyrics": "",
-                    "chords": "",
-                    "melody": ""
-                }
-                sections.append(current_section)
-            elif current_section:
-                if line.startswith('Lyrics:'):
-                    current_section["lyrics"] = True
-                elif line.startswith('Chords:'):
-                    current_section["chords"] = True
-                elif line.startswith('Melody:'):
-                    current_section["melody"] = True
-
-        return {"sections": sections}
-
-    def _parse_lyrics(self, lyrics_text: str) -> str:
-        """Clean and format lyrics text"""
-        cleaned_lyrics = []
-        for line in lyrics_text.split('\n'):
-            if not line.startswith('[') and line.strip():
-                cleaned_lyrics.append(line.strip())
-        return '\n'.join(cleaned_lyrics)
-
-    def _extract_melody_data(self, structure_text: str) -> str:
-        """Extract melody information from the structure"""
-        melody_info = []
-        in_melody_section = False
-
-        for line in structure_text.split('\n'):
-            if 'Melody:' in line:
-                in_melody_section = True
-                continue
-            elif in_melody_section and line.strip() and not line.startswith('['):
-                if 'Scale:' in line or 'Contour:' in line:
-                    melody_info.append(line.strip())
-            elif line.startswith('[') and in_melody_section:
-                in_melody_section = False
-
-        return '\n'.join(melody_info)
-
-    def _suggest_instruments(self, musical_style: str) -> list:
-        """Suggest instruments based on musical style"""
-        instrument_suggestions = {
-            'Rock': ['Electric Guitar', 'Drums', 'Bass Guitar', 'Keyboard'],
-            'Jazz': ['Saxophone', 'Piano', 'Double Bass', 'Trumpet'],
-            'Pop': ['Synthesizer', 'Electronic Drums', 'Bass', 'Acoustic Guitar'],
-            'Electronic': ['Synthesizer', 'Drum Machine', 'Digital Keyboard'],
-            'Classical': ['Violin', 'Piano', 'Cello', 'Flute']
-        }
-        return instrument_suggestions.get(musical_style, ['Piano', 'Guitar'])
-
-    def _create_emotion_intensity_map(self, mood: str) -> Dict[str, float]:
-        """Create an emotional intensity map for audio generation"""
-        emotion_intensity = {
-            'Sad': {'melancholy': 0.8, 'intensity': 0.6, 'energy': 0.3},
-            'Happy': {'joy': 0.9, 'intensity': 0.7, 'energy': 0.8},
-            'Angry': {'anger': 0.9, 'intensity': 0.9, 'energy': 0.9},
-            'Calm': {'serenity': 0.7, 'intensity': 0.4, 'energy': 0.2},
-            'Romantic': {'love': 0.8, 'intensity': 0.6, 'energy': 0.5}
-        }
-        return emotion_intensity.get(mood, {'neutral': 0.5})
-
-    def format_composition_for_export(self, composition_text: str) -> Dict[str, Any]:
-        """Format the full composition text into a structured dictionary"""
-        try:
-            # Parse composition sections
             sections = self._parse_composition_sections(composition_text)
 
-            # Extract title from Musical Parameters section
-            title = self._extract_title(sections.get("MUSICAL PARAMETERS", ""))
+            # Extract and validate metadata
+            metadata = self._extract_metadata(composition_text, sections)
+            if not metadata:
+                raise ValueError("No valid metadata found in composition")
 
-            # Parse musical parameters into structured format
-            musical_params = self._parse_musical_parameters(sections.get("MUSICAL PARAMETERS", ""))
+            # Extract and validate musical parameters
+            musical_params = self._extract_musical_parameters(
+                sections.get("MUSICAL PARAMETERS", "")
+            )
 
-            # Parse production elements
-            production_elements = self._parse_production_elements(sections.get("MUSICAL PARAMETERS", ""))
+            # Build the composition structure
+            composition_data = {}
 
-            # Parse mix notes
-            mix_notes = self._parse_mix_notes(sections.get("MUSICAL PARAMETERS", ""))
+            # Only add metadata if it exists
+            if metadata:
+                composition_data["metadata"] = metadata
 
-            return {
-                "metadata": {
-                    "title": title,
-                    "musical_style": self._extract_style(composition_text),
-                    "theme": self._extract_theme(composition_text),
-                    "mood": self._extract_mood(composition_text),
-                    "language": self._extract_language(composition_text)
-                },
-                "musical_parameters": musical_params,
-                "production": production_elements,
-                "mix_settings": mix_notes,
-                "sections": {
-                    "lyrics": sections.get("LYRICS", ""),
-                    "chord_progression": self._parse_chord_progression(sections.get("CHORD PROGRESSION", "")),
-                    "melody": self._parse_melody(sections.get("MELODY", "")),
-                },
-                "structure": self._extract_structure(composition_text)
-            }
+            # Add music_metadata if required fields exist
+            if all(key in metadata for key in ["style", "mood"]) and musical_params:
+                composition_data["music_metadata"] = {
+                    "musical_style": metadata["style"],
+                    "mood": metadata["mood"],
+                    "tempo_bpm": musical_params.get("tempo", self.default_parameters["tempo"]),
+                    "primary_key": musical_params.get("key", self.default_parameters["key"]),
+                    "time_signature": musical_params.get("time_signature", self.default_parameters["time_signature"]),
+                    "genre_specific_feel": musical_params.get("genre_specific_feel",
+                                                              self.default_parameters["genre_specific_feel"])
+                }
+
+            # Process main composition sections
+            composition_content = {}
+
+            # Add title if it exists
+            if "title" in metadata:
+                composition_content["title"] = metadata["title"]
+
+            # Process and add other sections only if they contain data
+            lyrics = self._clean_lyrics(sections.get("LYRICS", ""))
+            if lyrics:
+                composition_content["lyrics"] = lyrics
+
+            chord_progression = self._process_chord_progression(sections.get("CHORD PROGRESSION", ""))
+            if chord_progression:
+                composition_content["chord_progression"] = chord_progression
+
+            melody = self._extract_melody_data(sections.get("MELODY", ""))
+            if melody:
+                composition_content["melody"] = melody
+
+            structure = self._parse_song_structure(sections.get("COMPLETE SONG STRUCTURE", ""))
+            if structure and (structure.get("technical_parameters") or structure.get("sections")):
+                composition_content["structure"] = structure
+
+            if composition_content:
+                composition_data["composition"] = composition_content
+
+            # Add technical parameters if they exist and aren't empty
+            if musical_params:
+                composition_data["technical_parameters"] = musical_params
+
+            return composition_data
+
         except Exception as e:
-            logger.error(f"Error formatting composition: {str(e)}")
+            logger.error(f"Error parsing composition: {str(e)}")
             raise
 
-    def _extract_title(self, params_text: str) -> str:
-        """Extract title from musical parameters section"""
-        try:
-            title_section = params_text.split("[Title]")[1].split("[")[0].strip()
-            return title_section if title_section else "Untitled Composition"
-        except Exception:
-            return "Untitled Composition"
-
-    def _parse_musical_parameters(self, params_text: str) -> Dict[str, Any]:
-        """Parse musical parameters section into structured dictionary"""
-        params = {}
-        try:
-            params_section = params_text.split("[Musical Parameters]")[1].split("[")[0]
-            for line in params_section.split('\n'):
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip().lower().replace(' ', '_')
-                    params[key] = value.strip()
-        except Exception:
-            params = {
-                "tempo": "120 BPM",
-                "key": "C major",
-                "time_signature": "4/4",
-                "genre_specific_feel": "Straight",
-                "dynamic_level": "Medium"
-            }
-        return params
-
-    def _parse_production_elements(self, params_text: str) -> Dict[str, List[str]]:
-        """Parse production elements section into structured dictionary"""
-        elements = {"main_instruments": [], "effects": []}
-        try:
-            prod_section = params_text.split("[Production Elements]")[1].split("[")[0]
-            current_category = None
-
-            for line in prod_section.split('\n'):
-                line = line.strip()
-                if line.startswith("Main Instruments:"):
-                    current_category = "main_instruments"
-                elif line.startswith("Effects:"):
-                    current_category = "effects"
-                elif line.startswith("-") and current_category:
-                    elements[current_category].append(line[1:].strip())
-        except Exception:
-            elements = {
-                "main_instruments": ["Piano", "Bass", "Drums"],
-                "effects": ["Reverb"]
-            }
-        return elements
-
-    def _parse_mix_notes(self, params_text: str) -> Dict[str, str]:
-        """Parse mix notes section into structured dictionary"""
-        mix_notes = {}
-        try:
-            mix_section = params_text.split("[Mix Notes]")[1].split("[")[0]
-            for line in mix_section.split('\n'):
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip().lower().replace(' ', '_')
-                    mix_notes[key] = value.strip()
-        except Exception:
-            mix_notes = {
-                "mix_focus": "Balanced",
-                "stereo_space": "Centered",
-                "eq_focus": "Full range"
-            }
-        return mix_notes
-
-    def export_to_json(self, composition_text: str, filepath: str) -> None:
-        """Export composition to JSON file"""
-        try:
-            formatted_data = self.format_composition_for_export(composition_text)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(formatted_data, f, indent=2)
-            logger.info(f"Successfully exported JSON to {filepath}")
-        except Exception as e:
-            logger.error(f"Failed to export to JSON: {str(e)}")
-            raise
-
-    def export_to_txt(self, composition_text: str, filepath: str) -> None:
-        """Export composition to formatted text file"""
-        try:
-            formatted_text = self._format_txt_export(composition_text)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(formatted_text)
-            logger.info(f"Successfully exported TXT to {filepath}")
-        except Exception as e:
-            logger.error(f"Failed to export to TXT: {str(e)}")
-            raise
-
-    def _parse_composition_sections(self, text: str) -> Dict[str, Any]:
-        """Parse composition text into sections"""
+    def _parse_composition_sections(self, text: str) -> Dict[str, str]:
+        """Parse composition text into main sections."""
         sections = {}
         current_section = None
         current_content = []
 
         for line in text.split('\n'):
             if line.strip().startswith('##'):
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content).strip()
+                if current_section and current_content:
+                    content = '\n'.join(current_content).strip()
+                    if content:  # Only add section if it has content
+                        sections[current_section] = content
                     current_content = []
                 current_section = line.replace('#', '').strip()
             elif current_section:
                 current_content.append(line)
 
+        # Handle last section
         if current_section and current_content:
-            sections[current_section] = '\n'.join(current_content).strip()
+            content = '\n'.join(current_content).strip()
+            if content:  # Only add section if it has content
+                sections[current_section] = content
 
         return sections
 
-    def _format_txt_export(self, text: str) -> str:
-        """Format text export with additional metadata"""
-        header = [
-            "=" * 80,
-            "AI Generated Music Composition",
-            f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "=" * 80,
-            ""
-        ]
-        return '\n'.join(header + [text])
+    def _parse_song_structure(self, structure_text: str) -> Dict[str, Any]:
+        """Parse the complete song structure.
 
-    def _extract_metadata_field(self, text: str, field: str) -> str:
-        """Extract metadata field from composition text"""
-        for line in text.split('\n'):
-            if field.lower() in line.lower():
-                return line.split(':', 1)[1].strip() if ':' in line else ""
+        Args:
+            structure_text (str): Raw structure text
+
+        Returns:
+            Dict[str, Any]: Structured song data with only populated sections
+        """
+        structure = {
+            'technical_parameters': {},
+            'sections': []
+        }
+
+        current_section = None
+        section_content = {}
+
+        for line in structure_text.split('\n'):
+            line = line.strip()
+
+            if line.startswith('[Song Technical Parameters]'):
+                current_section = 'technical_parameters'
+                section_content = {}
+            elif line.startswith('[') and ']' in line:
+                # If we have a previous section with content, add it
+                if section_content:
+                    structure['sections'].append(section_content)
+
+                section_name = line.strip('[]')
+                section_content = {'name': section_name}
+            elif current_section == 'technical_parameters' and ':' in line:
+                key, value = line.split(':', 1)
+                value = value.strip()
+                if value:  # Only add non-empty values
+                    structure['technical_parameters'][key.strip()] = value
+            elif ':' in line:
+                content_type = line.split(':', 1)[0].lower().strip()
+                if content_type in ['lyrics', 'chords', 'melody']:
+                    # Look ahead for content after this line
+                    content = self._extract_section_content(structure_text, line)
+                    if content:  # Only add if we have content
+                        section_content[content_type] = content
+
+        # Add the last section if it has content
+        if section_content:
+            structure['sections'].append(section_content)
+
+        # Clean up the structure
+        if not structure['technical_parameters']:
+            del structure['technical_parameters']
+
+        return structure if structure.get('sections') or structure.get('technical_parameters') else {}
+
+    def _extract_metadata(self, composition_text: str, sections: Dict[str, str]) -> Dict[str, str]:
+        """Extract and validate all metadata fields."""
+        metadata = {
+            "title": self._extract_title(sections.get("MUSICAL PARAMETERS", "")),
+            "style": self._extract_metadata_field(composition_text, "Musical Style"),
+            "theme": self._extract_metadata_field(composition_text, "Theme"),
+            "mood": self._extract_metadata_field(composition_text, "Mood"),
+            "language": self._extract_metadata_field(composition_text, "Language"),
+            "generated_at": datetime.now().isoformat()
+        }
+
+        # Remove empty fields
+        return {k: v for k, v in metadata.items() if v}
+
+    def _extract_title(self, params_text: str) -> str:
+        """Extract title from parameters section."""
+        for line in params_text.split('\n'):
+            if 'Title' in line:
+                next_lines = params_text.split(line)[1].split('\n')
+                for next_line in next_lines:
+                    if next_line.strip() and not next_line.strip().startswith('**'):
+                        return next_line.strip().strip('"')
         return ""
 
-    def _extract_style(self, text: str) -> str:
-        return self._extract_metadata_field(text, "Musical Style")
+    def _extract_metadata_field(self, text: str, field: str) -> str:
+        """Extract specific metadata field from text."""
+        for line in text.split('\n'):
+            if f"{field}:" in line:
+                value = line.split(':', 1)[1].strip()
+                if value:  # Only return non-empty values
+                    return value
+        return ""
 
-    def _extract_theme(self, text: str) -> str:
-        return self._extract_metadata_field(text, "Theme")
+    def _extract_musical_parameters(self, text: str) -> Dict[str, str]:
+        """Extract all musical parameters from text."""
+        params = {}
+        current_section = None
 
-    def _extract_mood(self, text: str) -> str:
-        return self._extract_metadata_field(text, "Mood")
+        for line in text.split('\n'):
+            line = line.strip()
+            if line.startswith('**'):
+                current_section = line.strip('*').strip().lower()
+            elif ':' in line and current_section == "musical parameters":
+                key, value = line.split(':', 1)
+                key = key.strip().lower()
+                value = value.strip()
 
-    def _extract_language(self, text: str) -> str:
-        return self._extract_metadata_field(text, "Language")
+                if value:  # Only add parameter if it has a value
+                    if 'tempo' in key:
+                        params['tempo'] = value.split()[0]  # Extract just the number
+                    elif 'key' in key:
+                        params['key'] = value
+                    elif 'time signature' in key:
+                        params['time_signature'] = value
+                    elif 'genre-specific feel' in key:
+                        params['genre_specific_feel'] = value
+
+        # Only return params that have values
+        return {k: v for k, v in params.items() if v}
+
+    def _extract_section_content(self, text: str, start_line: str) -> str:
+        """Extract content for a section starting from a specific line."""
+        lines = text.split('\n')
+        start_idx = lines.index(start_line) + 1
+        content_lines = []
+
+        for line in lines[start_idx:]:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('[') or line.startswith('Lyrics:') or \
+                    line.startswith('Chords:') or line.startswith('Melody:'):
+                break
+            if not line.startswith('('):  # Skip comments/instructions
+                content_lines.append(line)
+
+        return '\n'.join(content_lines).strip()
+
+    def _clean_lyrics(self, lyrics_text: str) -> Dict[str, str]:
+        """Clean and structure lyrics by section."""
+        sections = {}
+        current_section = None
+        current_lines = []
+
+        for line in lyrics_text.split('\n'):
+            line = line.strip()
+            if line.startswith('[') and ']' in line:
+                if current_section and current_lines:
+                    content = '\n'.join(current_lines)
+                    if content:  # Only add section if it has content
+                        sections[current_section] = content
+                current_section = line.strip('[]').split('[')[0].strip()
+                current_lines = []
+            elif line and not line.startswith('(') and ':' not in line:
+                current_lines.append(line)
+
+        # Handle last section
+        if current_section and current_lines:
+            content = '\n'.join(current_lines)
+            if content:  # Only add section if it has content
+                sections[current_section] = content
+
+        return sections if sections else {}
+
+    def _process_chord_progression(self, chord_text: str) -> Dict[str, Any]:
+        """Process and structure chord progressions."""
+        sections: Dict[str, Dict[str, Any]] = {}
+        current_section = None
+
+        for line in chord_text.split('\n'):
+            line = line.strip()
+            if line.startswith('**') and not line.startswith('**Production'):
+                current_section = line.strip('*').strip()
+                sections[current_section] = {
+                    'progression': [],
+                    'time_signature': None,
+                    'rhythm': []
+                }
+            elif current_section:
+                if '[' in line and ']' in line:
+                    time_sig = line.strip('[]').strip()
+                    if time_sig:
+                        sections[current_section]['time_signature'] = time_sig
+                elif '-' in line and ('Major' in line or 'Minor' in line):
+                    chords = [c.strip() for c in line.split('-') if c.strip()]
+                    if chords:
+                        sections[current_section]['progression'].extend(chords)
+                elif 'beat:' in line.lower():
+                    sections[current_section]['rhythm'].append(line)
+
+        # Clean up empty sections and fields
+        return {
+            section: {
+                k: v for k, v in data.items()
+                if v and (not isinstance(v, list) or len(v) > 0)
+            }
+            for section, data in sections.items()
+            if any(v and (not isinstance(v, list) or len(v) > 0)
+                   for v in data.values())
+        }
+
+    def _extract_melody_data(self, melody_text: str) -> Dict[str, Any]:
+        """Extract and structure melody information."""
+        sections = {}
+        current_section = None
+
+        for line in melody_text.split('\n'):
+            line = line.strip()
+            if line.startswith('###'):
+                current_section = line.strip('#').strip('[]').strip()
+                if current_section:
+                    sections[current_section] = {}
+            elif current_section and ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                if key in ['Scale', 'Contour', 'Range', 'Syncopation'] and value:
+                    sections[current_section][key.lower()] = value
+
+        # Remove empty sections
+        return {k: v for k, v in sections.items() if v}
+
+    def export_to_json(self, composition_text: str, filepath: str) -> None:
+        """Export composition to JSON file."""
+        try:
+            formatted_data = self.parse_composition(composition_text)
+            if not formatted_data:
+                raise ValueError("No valid data to export")
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(formatted_data, f, indent=2, ensure_ascii=False)
+            logger.info(f"Successfully exported JSON to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to export to JSON: {str(e)}")
+            raise
+
+    def export_to_txt(self, composition_text: str, filepath: str) -> None:
+        """Export composition to formatted text file."""
+        try:
+            if not composition_text.strip():
+                raise ValueError("No content to export")
+
+            header = [
+                "=" * 80,
+                "AI Generated Music Composition",
+                f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "=" * 80,
+                ""
+            ]
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(header + [composition_text]))
+            logger.info(f"Successfully exported TXT to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to export to TXT: {str(e)}")
+            raise
+
+    def generate_audio_export_metadata(self, lyrics: str, chord_progression: str,
+                                       song_structure: str, musical_style: str,
+                                       mood: str) -> Dict[str, Any]:
+        """
+        Generate metadata for audio generation, maintaining backward compatibility.
+        """
+        try:
+            # Parse the song structure for technical parameters
+            params = self._extract_musical_parameters(song_structure)
+
+            # Build the metadata structure with only populated fields
+            metadata = {
+                "metadata": {
+                    "style": musical_style,
+                    "mood": mood
+                }
+            }
+
+            # Add music metadata if we have valid parameters
+            music_metadata = {
+                "musical_style": musical_style,
+                "mood": mood
+            }
+
+            # Only add parameters that exist
+            if params.get("tempo"):
+                music_metadata["tempo_bpm"] = params["tempo"]
+            if params.get("key"):
+                music_metadata["primary_key"] = params["key"]
+            if params.get("time_signature"):
+                music_metadata["time_signature"] = params["time_signature"]
+            if params.get("genre_specific_feel"):
+                music_metadata["genre_specific_feel"] = params["genre_specific_feel"]
+
+            metadata["music_metadata"] = music_metadata
+
+            # Process structure and add only if valid
+            structure = self._parse_song_structure(song_structure)
+            if structure:
+                metadata["musical_structure"] = dict(song_structure=structure)
+                # metadata["musical_structure"] = {
+                #     "song_structure": structure
+                # }
+
+            # Process chord progression and add if valid
+            chords = self._process_chord_progression(chord_progression)
+            if chords:
+                if "musical_structure" not in metadata:
+                    metadata["musical_structure"] = {}
+                metadata["musical_structure"]["chord_progression"] = chords
+
+            # Process lyrics and add if valid
+            clean_lyrics = self._clean_lyrics(lyrics)
+            if clean_lyrics:
+                metadata["lyrics_data"] = clean_lyrics
+
+            # Process melody data if present in structure
+            melody = self._extract_melody_data(song_structure)
+            if melody:
+                metadata["melody_data"] = melody
+
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Error generating audio metadata: {str(e)}")
+            raise
