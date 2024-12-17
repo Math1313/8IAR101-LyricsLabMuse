@@ -39,101 +39,6 @@ class MusicStructureRAG:
             streaming=True
         )
 
-    def _augment_query(self, music_style: str) -> str:
-        """Create an enhanced query with comprehensive genre fallbacks"""
-        # Define detailed genre mappings for similar styles
-        # If genre isn't in the RAG
-        genre_mappings = {
-            # Rock-based genres
-            'punk': 'rock',
-            'metal': 'rock',
-            'hard rock': 'rock',
-            'indie': 'rock',
-            'alternative': 'rock',
-            'grunge': 'rock',
-            'post-rock': 'rock',
-            'psychedelic': 'rock',
-            'progressive rock': 'rock',
-
-            # Electronic genres
-            'techno': 'edm',
-            'house': 'edm',
-            'trance': 'edm',
-            'dubstep': 'edm',
-            'drum and bass': 'edm',
-            'ambient': 'edm',
-            'electronica': 'edm',
-            'synthwave': 'edm',
-            'breakbeat': 'edm',
-
-            # Pop variations
-            'indie pop': 'pop',
-            'synth pop': 'pop',
-            'k-pop': 'pop',
-            'j-pop': 'pop',
-            'pop rock': 'pop',
-            'acoustic': 'pop',
-            'teen pop': 'pop',
-            'power pop': 'pop',
-
-            # Hip-hop/Rap variations
-            'hip hop': 'rap',
-            'trap': 'rap',
-            'grime': 'rap',
-            'drill': 'rap',
-            'boom bap': 'rap',
-            'conscious rap': 'rap',
-
-            # Folk/Country variations
-            'folk': 'country',
-            'bluegrass': 'country',
-            'americana': 'country',
-            'country rock': 'country',
-            'western': 'country',
-
-            # R&B variations
-            'rnb': 'rhythm and blues',
-            'soul': 'rhythm and blues',
-            'neo soul': 'rhythm and blues',
-            'contemporary rb': 'rhythm and blues',
-            'funk': 'rhythm and blues',
-
-            # Jazz variations
-            'bebop': 'jazz',
-            'swing': 'jazz',
-            'fusion': 'jazz',
-            'smooth jazz': 'jazz',
-            'latin jazz': 'jazz',
-            'free jazz': 'jazz',
-
-            # Reggae variations
-            'ska': 'reggae',
-            'dancehall': 'reggae',
-            'dub': 'reggae',
-            'rocksteady': 'reggae',
-
-            # Blues variations
-            'delta blues': 'blues',
-            'chicago blues': 'blues',
-            'electric blues': 'blues',
-            'rhythm and blues': 'blues',
-
-            # Classical variations
-            'baroque': 'classical',
-            'romantic': 'classical',
-            'contemporary classical': 'classical',
-            'neo-classical': 'classical',
-            'chamber music': 'classical',
-            'orchestral': 'classical'
-        }
-
-        # Get base genre if the specific style isn't found
-        # Convert to lowercase and strip whitespace for better matching
-        clean_style = music_style.lower().strip()
-        base_genre = genre_mappings.get(clean_style, music_style)
-
-        return f"{base_genre} Music Typical Structure Intro Outro"
-
     def _retrieve_context(self, query: str) -> List[Tuple[str, float]]:
         """Retrieve relevant context"""
         db = Chroma(
@@ -158,7 +63,7 @@ class MusicStructureRAG:
             print(f"Processing genre: {music_style}")
 
             # Create query and get context
-            augmented_query = self._augment_query(music_style)
+            augmented_query = f"{music_style} Music Typical Structure Intro Outro"
             results = self._retrieve_context(augmented_query)
 
             if not results:

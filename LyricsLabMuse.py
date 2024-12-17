@@ -3,9 +3,8 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
                              QFrame, QMessageBox, QTextEdit,QComboBox,
                              QScrollArea, QProgressDialog, QStyle, QHBoxLayout, QFileDialog
                              )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+from PyQt5.QtCore import Qt
 import logging
-import time
 import sys
 import os
 
@@ -259,7 +258,7 @@ class ModernInterface(QWidget):
         """Generate audio in a separate thread"""
         try:
             # Get input fields and validate
-            musical_style = self.text_fields[0].text()
+            musical_style = self.text_fields[0].currentText()
             song_theme = self.text_fields[1].text()
             mood = self.text_fields[2].text()
             language = self.text_fields[3].text()
