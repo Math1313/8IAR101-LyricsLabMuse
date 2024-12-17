@@ -1,3 +1,4 @@
+# src/core/music_composition_experts.py
 import os
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
@@ -17,24 +18,42 @@ class MusicCompositionExperts:
         )
 
     MUSICAL_PARAMETERS_TEMPLATE = """
-        You are a music producer. Define the technical parameters for a {musical_style} song with a {mood} mood.
+    You are a music producer creating a {musical_style} song with a {mood} mood.
 
-        Provide ONLY these parameters in this exact format:
+    First, generate a creative title that reflects the style, mood, and theme provided.
+    The title should be catchy and memorable.
 
-        [Musical Parameters]
-        Structure: {structure}
-        Tempo: (specific BPM, e.g., "120 BPM")
-        Key: (specific key, e.g., "C major" or "A minor")
-        Time Signature: (e.g., "4/4" or "3/4")
-        Genre-Specific Feel: (e.g., "Shuffle", "Straight", "Swing")
-        Dynamic Level: (e.g., "Medium-loud", "Soft", "Building")
-        Suggested Sound: (e.g., "Warm analog", "Modern digital", "Raw acoustic")
+    Then, define the technical parameters in this exact structured format:
 
-        [Production Notes]
-        Main Instruments: (list 3-4 key instruments)
-        Effects: (list 2-3 key effects)
-        Mix Focus: (e.g., "Bass-heavy", "Vocal-forward", "Balanced")
-        """
+    [Title]
+    <Generate a single line with the song title>
+
+    [Musical Parameters]
+    Tempo: <specific BPM value between 60-180>
+    Key: <specific key, e.g., "C major" or "A minor">
+    Time Signature: <specific time signature, e.g., "4/4" or "3/4">
+    Genre-Specific Feel: <specific feel, e.g., "Shuffle", "Straight", "Swing">
+    Dynamic Level: <specific level, e.g., "Medium-loud", "Soft", "Building">
+
+    [Production Elements]
+    Main Instruments:
+    - <instrument 1>
+    - <instrument 2>
+    - <instrument 3>
+    (List 3-4 key instruments typical for {musical_style})
+
+    Effects:
+    - <effect 1>
+    - <effect 2>
+    (List 2-3 key effects appropriate for {musical_style})
+
+    [Mix Notes]
+    Mix Focus: <specific mix focus, e.g., "Bass-heavy", "Vocal-forward", "Balanced">
+    Stereo Space: <specific stereo approach, e.g., "Wide", "Centered", "Dynamic">
+    EQ Focus: <specific frequency focus, e.g., "Rich low-end", "Bright highs", "Mid-focused">
+
+    Provide ONLY these parameters exactly as requested, with no additional explanations or variations.
+    """
 
     LYRICS_EXPERT_TEMPLATE = """
         You are a professional lyricist. Create structured lyrics based on:
@@ -242,6 +261,55 @@ class MusicCompositionExperts:
                 yield "## SONG STRUCTURE\n\n"
             elif in_complete_structure:
                 yield chunk
+
+    def _format_complete_structure(self, lyrics: str, chord_progression: str, melody: str) -> str:
+        """Format the complete song structure with proper section mapping"""
+
+        # Parse sections
+        lyrics_sections = self._parse_lyrics_sections(lyrics)
+        chord_sections = self._parse_chord_sections(chord_progression)
+        melody_sections = self._parse_melody_sections(melody)
+
+        # Build combined structure
+        structure = []
+
+        # Add technical parameters
+        structure.append("[Song Technical Parameters]")
+        for param in ["Key", "Tempo", "Time Signature"]:
+            if param.lower() in self.current_parameters:
+                structure.append(f"{param}: {self.current_parameters[param.lower()]}")
+        structure.append("")
+
+        # Combine sections
+        section_order = ["Verse 1", "Chorus", "Verse 2", "Bridge", "Final Chorus"]
+        for section in section_order:
+            structure.append(f"[{section}]")
+
+            # Add lyrics
+            structure.append("Lyrics:")
+            if section in lyrics_sections:
+                structure.append(lyrics_sections[section])
+            else:
+                structure.append("(No lyrics for this section)")
+
+            # Add chords
+            structure.append("Chords:")
+            base_section = section.split()[0]  # "Verse 1" -> "Verse"
+            if base_section in chord_sections:
+                structure.append(chord_sections[base_section])
+            else:
+                structure.append("(No chord progression for this section)")
+
+            # Add melody
+            structure.append("Melody:")
+            if base_section in melody_sections:
+                structure.append(melody_sections[base_section])
+            else:
+                structure.append("(No melody for this section)")
+
+            structure.append("")
+
+        return "\n".join(structure)
 
     def generate_song_composition(self, musical_style, structure, song_theme, mood, language):
         """Generate a complete song composition with musical parameters."""

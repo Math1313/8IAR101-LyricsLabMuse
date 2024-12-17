@@ -6,8 +6,9 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 from langchain_chroma import Chroma
 
-CHROMA_PATH = "./chroma/"
-DATA_PATH = "./ragData/"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+CHROMA_PATH = os.path.join(current_dir, "../../chroma/")
+DATA_PATH = os.path.join(current_dir, "../../ragData/")
 
 embedding_function = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -80,10 +81,10 @@ def check_database(db_path):
         return "not-created"
 
 
-def validate_files_in_db(data_path, db_path):
+def validate_files_in_db(db_path):
     # List all files in DATA_PATH avec le chemin complet
-    files_in_data_path = set(os.path.join(data_path, fichier)
-                             for fichier in os.listdir(data_path))
+    files_in_data_path = set(os.path.join(DATA_PATH, fichier)
+                             for fichier in os.listdir(DATA_PATH))
 
     database_state = check_database(db_path)
 
@@ -129,8 +130,7 @@ def update_data_store():
     """
     Update the vector database in Chroma with missing files.
     """
-    missing_files = validate_files_in_db(
-        DATA_PATH, os.path.join(CHROMA_PATH, "chroma.sqlite3"))
+    missing_files = validate_files_in_db(os.path.join(CHROMA_PATH, "chroma.sqlite3"))
     if not missing_files:
         print("No missing files to process.")
         return
