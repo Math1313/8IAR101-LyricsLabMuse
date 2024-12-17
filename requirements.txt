@@ -11,6 +11,7 @@ audiocraft
 
 python-dotenv
 langchain
+transformers
 PyQt5
 langchain_community
 sentence-transformers

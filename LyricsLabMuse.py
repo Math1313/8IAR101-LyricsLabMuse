@@ -19,6 +19,7 @@ from src.gui.components.themes import apply_dark_theme, apply_light_theme
 from src.core.audiocraft_generator import AudiocraftGenerator
 from src.core.music_composition_export_formatter import MusicCompositionExportFormatter
 from src.core.rag_helper import MusicStructureRAG
+from src.core.obscene_filter import ObsceneFilter
 
 class ModernInterface(QWidget):
     def __init__(self):
@@ -30,6 +31,7 @@ class ModernInterface(QWidget):
                                  f"Failed to initialize audio generator: {str(e)}")
             return
         self.rag = MusicStructureRAG()
+        self.ObsceneFilter = ObsceneFilter()
         self.dark_mode = False
         self.streaming_thread = None
         self.audio_controls = None
@@ -166,7 +168,16 @@ class ModernInterface(QWidget):
             QMessageBox.warning(
                 self, "Error", "Please fill in all empty fields")
             return
-
+        
+        # Validate obscene language
+        if(any(
+            self.ObsceneFilter.is_obscene(item)
+            for item in [musicalStyle, songTheme, mood, language]
+        )):
+            QMessageBox.warning(
+                self, "Error", "Please avoid using obscene language")
+            return 
+        
         try:
             # Get structure using new RAG
             structure = self.rag.query_rag(musicalStyle)
