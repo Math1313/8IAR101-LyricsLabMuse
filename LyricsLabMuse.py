@@ -31,6 +31,7 @@ class ModernInterface(QWidget):
             return
         self.rag = MusicStructureRAG()
         self.ObsceneFilter = ObsceneFilter()
+        self.MusicExportFormatter = MusicCompositionExportFormatter()
         self.dark_mode = False
         self.streaming_thread = None
         self.audio_controls = None
@@ -285,14 +286,13 @@ class ModernInterface(QWidget):
 
             try:
                 # Parse and format data
-                formatter = MusicCompositionExportFormatter()
-                parsed_data = formatter.parse_composition(composition_text)
+                parsed_data = self.MusicExportFormatter.parse_composition(composition_text)
 
                 # Log parsed data for debugging
                 logging.debug(f"Parsed composition data: {parsed_data}")
                 print(parsed_data)
                 # Generate audio export metadata
-                formatted_data = formatter.generate_audio_export_metadata(
+                formatted_data = self.MusicExportFormatter.generate_audio_export_metadata(
                     lyrics=parsed_data.get('lyrics', {}),
                     chord_progression=parsed_data.get('chord_progression', {}),
                     song_structure=parsed_data.get('full_structure', {}),
@@ -436,8 +436,7 @@ class ModernInterface(QWidget):
 
             if filepath:
                 composition_text = self.full_composition_field.toPlainText()
-                formatter = MusicCompositionExportFormatter()
-                formatter.export_to_json(composition_text, filepath)
+                self.MusicExportFormatter.export_to_json(composition_text, filepath)
                 QMessageBox.information(
                     self, "Success", "Song exported to JSON successfully!")
 
@@ -454,8 +453,7 @@ class ModernInterface(QWidget):
 
             if filepath:
                 composition_text = self.full_composition_field.toPlainText()
-                formatter = MusicCompositionExportFormatter()
-                formatter.export_to_txt(composition_text, filepath)
+                self.MusicExportFormatter.export_to_txt(composition_text, filepath)
                 QMessageBox.information(
                     self, "Success", "Song exported to TXT successfully!")
 

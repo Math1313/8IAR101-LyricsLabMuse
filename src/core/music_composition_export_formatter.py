@@ -87,12 +87,6 @@ class MusicCompositionExportFormatter:
             if musical_params:
                 composition_data["technical_parameters"] = musical_params
 
-            print("Musical parameters:", musical_params)
-            print("Parsed lyrics:", lyrics)
-            print("Parsed chord progression:", chord_progression)
-            print("Parsed melody:", melody)
-            print("Parsed structure:", structure)
-
             return composition_data
 
         except Exception as e:

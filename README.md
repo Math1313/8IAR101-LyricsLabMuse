@@ -81,9 +81,12 @@ py src/core/create_rag_data.py
 - [x] Problème avec le output chords/lyrics/melody -> on a plutôt une analyse de la chanson
 - [x] Fix PROMPT_TEMPLATE rag_helper
 ## Improvements
-- [ ] Implémenter le output audiogen
+- [X] Implémenter le output audiogen
 - [x] Filtrage vulgaire
 - [ ] Créer une procédure pour rendre le projet exécutable (.exe)
+- [ ] Implémenter la modification de prompt
+- [ ] Générer des songs avec des longueurs différentes
+- [ ] Générer des paroles à partir des lyrics (synthèse vocale)
 
 
 
