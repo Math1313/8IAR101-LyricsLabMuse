@@ -41,6 +41,7 @@ class AudiocraftGenerator:
 
     def generate_full_song(self, composition_data: Dict[str, Any], progress_callback=None) -> Dict[str, str]:
         try:
+            print(composition_data)
             # Generate timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
