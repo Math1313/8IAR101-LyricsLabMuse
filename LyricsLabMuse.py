@@ -31,6 +31,7 @@ class ModernInterface(QWidget):
             return
         self.rag = MusicStructureRAG()
         self.ObsceneFilter = ObsceneFilter()
+        self.MusicExportFormatter = MusicCompositionExportFormatter()
         self.dark_mode = False
         self.streaming_thread = None
         self.audio_controls = None
@@ -253,9 +254,8 @@ class ModernInterface(QWidget):
         else:
             apply_light_theme(self)
 
-
     def generate_audio(self):
-        """Generate audio in a separate thread"""
+        """Generate audio in a separate thread with proper error handling and data processing"""
         try:
             # Get input fields and validate
             musical_style = self.text_fields[0].currentText()
@@ -275,35 +275,44 @@ class ModernInterface(QWidget):
             self.progress.setAutoReset(True)
             self.progress.setMinimumDuration(0)  # Show immediately
             self.progress.setValue(0)
-
-            # Make the progress dialog wider
             self.progress.setMinimumWidth(300)
 
-            # Get and validate composition data
+            # Get composition text and validate
             composition_text = self.full_composition_field.toPlainText()
             if not composition_text:
                 QMessageBox.warning(
                     self, "Error", "Please generate composition first")
                 return
 
-            # Parse and format data
-            parsed_data = self._parse_composition_data(composition_text)
-            formatter = MusicCompositionExportFormatter()
-            formatted_data = formatter.generate_audio_export_metadata(
-                lyrics=parsed_data['lyrics'],
-                chord_progression=parsed_data['chord_progression'],
-                song_structure=parsed_data['full_structure'],
-                musical_style=musical_style,
-                mood=mood
-            )
+            try:
+                # Parse and format data
+                parsed_data = self.MusicExportFormatter.parse_composition(composition_text)
 
-            # Update musical parameters
-            if 'music_metadata' not in formatted_data:
-                formatted_data['music_metadata'] = {}
-            formatted_data['music_metadata'].update({
-                'tempo_bpm': parsed_data.get('musical_parameters', {}).get('Tempo', '120').split()[0],
-                'primary_key': parsed_data.get('musical_parameters', {}).get('Key', 'C'),
-            })
+                # Log parsed data for debugging
+                logging.debug(f"Parsed composition data: {parsed_data}")
+                print(parsed_data)
+                # Generate audio export metadata
+                formatted_data = self.MusicExportFormatter.generate_audio_export_metadata(
+                    lyrics=parsed_data.get('lyrics', {}),
+                    chord_progression=parsed_data.get('chord_progression', {}),
+                    song_structure=parsed_data.get('full_structure', {}),
+                    musical_style=musical_style,
+                    mood=mood
+                )
+
+                # Log formatted data for debugging
+                logging.debug(f"Formatted audio metadata: {formatted_data}")
+
+                # Validate formatted data structure
+                if not formatted_data.get('music_metadata'):
+                    raise ValueError("Missing required music metadata")
+
+            except Exception as e:
+                logging.error(f"Data formatting error: {str(e)}")
+                QMessageBox.critical(
+                    self, "Formatting Error",
+                    f"Failed to process composition data: {str(e)}")
+                return
 
             # Create and configure audio generation thread
             self.audio_thread = AudioGenerationThread(
@@ -326,9 +335,11 @@ class ModernInterface(QWidget):
         except ValueError as e:
             QMessageBox.warning(self, "Input Error", str(e))
         except Exception as e:
-            QMessageBox.critical(self, "Audio Generation Error",
-                                 f"Failed to generate audio: {str(e)}")
             logging.error(f"Audio generation error: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Audio Generation Error",
+                f"Failed to generate audio: {str(e)}")
 
     def update_generation_progress(self, percent, message):
         """Update progress dialog"""
@@ -395,47 +406,6 @@ class ModernInterface(QWidget):
                                  f"Failed to initialize audio controls: {str(e)}")
             logging.error(f"Audio controls setup error: {str(e)}")
 
-    def _parse_composition_data(self, composition_text: str) -> dict:
-        """
-        Parse the full composition text to extract all musical elements
-        """
-        sections = {}
-        current_section = None
-        current_content = []
-
-        # Split by sections
-        for line in composition_text.split('\n'):
-            if line.startswith('##'):
-                # Save previous section
-                if current_section and current_content:
-                    sections[current_section] = '\n'.join(current_content)
-                    current_content = []
-                # Start new section
-                current_section = line.replace('#', '').strip()
-            elif current_section:
-                current_content.append(line)
-
-        # Add final section
-        if current_section and current_content:
-            sections[current_section] = '\n'.join(current_content)
-
-        # Extract specific parameters
-        musical_params = {}
-        if "MUSICAL PARAMETERS" in sections:
-            params_text = sections["MUSICAL PARAMETERS"]
-            for line in params_text.split('\n'):
-                if ":" in line:
-                    key, value = line.split(':', 1)
-                    musical_params[key.strip()] = value.strip()
-
-        return {
-            'musical_parameters': musical_params,
-            'lyrics': sections.get("LYRICS", ""),
-            'chord_progression': sections.get("CHORD PROGRESSION", ""),
-            'melody': sections.get("MELODY", ""),
-            'full_structure': sections.get("COMPLETE SONG STRUCTURE", "")
-        }
-
     def create_export_buttons(self, layout):
         """Create export buttons for JSON and TXT formats"""
         export_layout = QHBoxLayout()
@@ -466,8 +436,7 @@ class ModernInterface(QWidget):
 
             if filepath:
                 composition_text = self.full_composition_field.toPlainText()
-                formatter = MusicCompositionExportFormatter()
-                formatter.export_to_json(composition_text, filepath)
+                self.MusicExportFormatter.export_to_json(composition_text, filepath)
                 QMessageBox.information(
                     self, "Success", "Song exported to JSON successfully!")
 
@@ -484,8 +453,7 @@ class ModernInterface(QWidget):
 
             if filepath:
                 composition_text = self.full_composition_field.toPlainText()
-                formatter = MusicCompositionExportFormatter()
-                formatter.export_to_txt(composition_text, filepath)
+                self.MusicExportFormatter.export_to_txt(composition_text, filepath)
                 QMessageBox.information(
                     self, "Success", "Song exported to TXT successfully!")
 

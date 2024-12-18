@@ -24,7 +24,7 @@ class AudiocraftGenerator:
                 self.music_model = self.music_model.to(self.device)
 
             # Set default parameters
-            self.set_generation_params()
+            self.set_generation_params(5)
 
         except Exception as e:
             logger.error(f"Error initializing MusicGen model: {str(e)}")
@@ -41,6 +41,7 @@ class AudiocraftGenerator:
 
     def generate_full_song(self, composition_data: Dict[str, Any], progress_callback=None) -> Dict[str, str]:
         try:
+            print(composition_data)
             # Generate timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -201,7 +202,7 @@ class AudiocraftGenerator:
         Returns estimated time in seconds
         """
         # Get base generation parameters
-        duration = self.music_model.generation_params.get('duration', 30)
+        duration = self.music_model.generation_params.get('duration', 5)
 
         # Factor in model size
         # 'small' model is faster than 'medium' or 'large'
