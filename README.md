@@ -85,6 +85,11 @@ MODEL_URL="http://localhost:1234/v1"
 py src/core/create_rag_data.py
 ```
 
+### 6. Run the app
+``` bash
+py .\LyricsLabMuse.py
+```
+
 ## Issues
 - [x] Problème avec le output chords/lyrics/melody -> on a plutôt une analyse de la chanson
 - [x] Fix PROMPT_TEMPLATE rag_helper
