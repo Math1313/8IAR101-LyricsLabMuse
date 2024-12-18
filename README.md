@@ -58,9 +58,17 @@ source .venv/bin/activate
 ```
 
 ### 3. Install Dependencies
+Install the required packages using the 3 bash cmd first and then requirements file:
 
-Install all required packages using the requirements file:
-
+```bash
+pip install wheel setuptools numpy==1.24.3
+```
+```bash
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cpu
+```
+```bash
+pip install audiocraft
+```
 ```bash
 pip install -r requirements.txt
 ```

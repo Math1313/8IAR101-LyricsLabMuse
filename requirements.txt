@@ -1,10 +1,4 @@
-wheel
 setuptools
-numpy
-torch
-torchvision
-torchaudio
-audiocraft
 python-dotenv
 PyQt5
 langchain
@@ -12,6 +6,5 @@ langchain_community
 langchain_openai
 langchain_huggingface
 langchain_chroma
-transformers
 sentence-transformers
 pypdf
